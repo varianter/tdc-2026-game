@@ -1,0 +1,14 @@
+{
+"gameProperties"": {
+	WalkSpeed  = 100.0 // px/sec
+	JumpSpeed  = 60
+	Gravity    = 600  // px/sec^2
+	JumpForce  = -250 // negative means up
+	GroundY    = 148  // positive means down, 0 is center
+	AirControl = 0.5
+},
+"gameObjects": [
+
+  
+]
+}
