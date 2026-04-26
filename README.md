@@ -6,9 +6,31 @@ Ambisjonen er at det skal kunne vibes ut et spill av de som er på konferansen.
 
 Vi lagre en JSON-struktur som menneske eller LLM-gamedevs kan forholde seg til.
 
-Det vi har så langt:
+# Koden
 
-[Se video](./demos/chicken.mp4)
+Bruker [ebiten](https://ebitengine.org/) som spillmotor. Det er en veldig enkel spillmotor for go.
+
+Koden er delt inn i noen deler:
+
+- `main.go` - setter opp spillet, størrelse på vindu osv
+- `player.go` - logikk for hvordan spilleren beveger seg, collision detection og hvilke animasjoner som spilles
+- `game.go` - selve spillet. Her styres camera, og vi tegner inn bakken, fiender og andre assets
+- `sprites.go` - laste inn assets, dele inn i spritesheets og logikk for animasjoner ligger her
+
+# Assets/pixelart
+
+I mappen assets ligger pixelart.
+
+For å editere pixelart er det enklest å bruke et program som er laget for pixelart. De beste alternativene er:
+
+- [Aseprite](https://www.aseprite.org/) - Koster 150 kroner og er veldig bra, alle youtube-tutorials bruker dette (Jeg (Anders) bruker dette). Det er open source så man kan få det gratis hvis man bygger fra source :D
+- [Pixelorama](https://pixelorama.org/) - Gratis og veldig bra, men ikke like mye brukt av "proffe"
+
+Man kan importere spritesheet fra png i begge disse.
+
+Trykk import og import spritesheet, deretter sett størrelsen på spriten og importer.
+
+Man har lyst å ende opp med riktig antall frames.
 
 # Ide til art/konsept
 
@@ -19,14 +41,16 @@ Det vi har så langt:
   - Eller bare en kjent fiende (hufsa, skjelett, bjørn, ulv)
 - Powerups er kaffe, redbull, mat, godteri, etc
 
+![En lite gif av et konsept](./demos/konferansegjenger.gif)
+
 Pixeldugnad i juni?
 
 # Backlog/todos
 
-- [ ] Splitte kodebasen ut i flere filer
+- [x] Splitte kodebasen ut i flere filer
 - [ ] x, y koordinatene er litt rotete nå. Hvor skal origo være? Gir mening at 0,0 er nederst til høyre. Nå er y = 0 midt på skjermen i noen tilfeller. Enklere for implemtantør av spill hvis dette gir mer mening
-- [ ] Skrive en liten readme på kodebasen (Anders)
-- [ ] Skrive en liten readme på pixelart (verktøy, hvordan laste inn spritesheet) (Anders)
+- [x] Skrive en liten readme på kodebasen (Anders)
+- [x] Skrive en liten readme på pixelart (verktøy, hvordan laste inn spritesheet) (Anders)
 
 ## POC - Mario Run aktig
 
