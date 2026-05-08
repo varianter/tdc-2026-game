@@ -33,7 +33,7 @@ func main() {
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetWindowSize(426*4, 240*4)
 	ebiten.SetWindowTitle("GOTY2026")
-	if err := ebiten.RunGame(game); err != nil {
+	if err := ebiten.RunGameWithOptions(game, &ebiten.RunGameOptions{InitUnfocused: true}); err != nil {
 		log.Fatal(err)
 	}
 }
