@@ -1,6 +1,10 @@
 package main
 
-import "github.com/hajimehoshi/ebiten/v2"
+import (
+	"math"
+
+	"github.com/hajimehoshi/ebiten/v2"
+)
 
 type Player struct {
 	sheet         *SpriteSheet
@@ -9,10 +13,9 @@ type Player struct {
 	idleRightAnim *Animation
 	idleLeftAnim  *Animation
 	current       *Animation
-	orientation   rune
 	x, y          float64
 	vx, vy        float64
-	onGround      bool
+	movementScale float64
 }
 
 func Newplayer(sheet *SpriteSheet) *Player {
@@ -42,73 +45,80 @@ func Newplayer(sheet *SpriteSheet) *Player {
 			FrameCount: 6,
 			FPS:        10,
 		},
-		x: ScreenW / 2, y: GroundY,
-		orientation: 'r',
+		x: 0, y: 0,
+		movementScale: 1.0,
 	}
 	player.current = player.idleRightAnim
 
 	return player
 }
 
-func (c *Player) switchAnim(anim *Animation) {
-	if c.current != anim {
+func (p *Player) switchAnim(anim *Animation) {
+	if p.current != anim {
 		anim.elapsed = 0
-		c.current = anim
+		p.current = anim
 	}
 }
 
-func (c *Player) Update(dt float64) error {
-	movementScale := 1.0
-	if !c.onGround {
-		movementScale = AirControl
-	}
+// Calculate next position based on velocity
+func (p *Player) nextPos(dt float64) (x float64, y float64) {
+	x = math.Round(p.x + p.vx*dt)
+	y = math.Round(p.y + (p.vy * dt))
+	return x, y
+}
 
+func (p *Player) Update(dt float64, level Level) error {
 	// Calculate velocity
-	c.vx = 0
-	if ebiten.IsKeyPressed(ebiten.KeyRight) {
-		c.vx = WalkSpeed * movementScale
-		c.switchAnim(c.walkRightAnim) // TODO: Flying animation
-		c.orientation = 'r'
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
-		c.vx = -WalkSpeed * movementScale
-		c.switchAnim(c.walkLeftAnim) // TODO: Flying animation
-		c.orientation = 'l'
-	}
-	if c.onGround && (ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsKeyPressed(ebiten.KeyUp)) {
-		c.vy = JumpForce
-		c.onGround = false
-	}
-	if c.vx == 0 {
-		if c.orientation == 'l' {
-			c.switchAnim(c.idleLeftAnim)
-		} else {
-			c.switchAnim(c.idleRightAnim)
+
+	if AutoRun {
+		p.vx = WalkSpeed * p.movementScale
+	} else {
+		p.vx = 0
+		if ebiten.IsKeyPressed(ebiten.KeyRight) {
+			p.vx = WalkSpeed * p.movementScale
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyLeft) {
+			p.vx = -WalkSpeed * p.movementScale
 		}
 	}
 
-	// Gravity
-	if !c.onGround {
-		c.vy += Gravity * dt
+	if p.vy == 0 && (ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsKeyPressed(ebiten.KeyUp)) {
+		p.vy = JumpForce
+	}
+
+	p.vy -= Gravity * dt
+
+	// nextX := p.x + (p.vx * dt)
+	// nextY := p.y + (p.vy * dt)
+	nextX, nextY := p.nextPos(dt)
+	collision := level.collide(nextX, nextY)
+
+	if collision.collideX.collision {
+		p.vx = 0
+		p.x = collision.collideX.cord
+	}
+
+	if collision.collideY.collision {
+		p.vy = 0
+		p.y = collision.collideY.cord
 	}
 
 	// Update position based on velocity
-	c.x += c.vx * dt
-	c.y += c.vy * dt
-
-	// Collision detection
-	// Collide with ground
-	if c.y+float64(c.sheet.FrameH) >= GroundY {
-		c.y = GroundY - float64(c.sheet.FrameH)
-		c.vy = 0
-		c.onGround = true
+	x, y := p.nextPos(dt)
+	if x > p.x {
+		p.switchAnim(p.walkRightAnim)
 	}
+	if x < p.x {
+		p.switchAnim(p.walkLeftAnim)
+	}
+	p.x = x
+	p.y = y
 
-	c.current.Update(dt)
+	p.current.Update(dt)
 	return nil
 }
 
-func (c *Player) Draw(canvas *Canvas) {
-	frame := c.current.CurrentFrame()
-	canvas.DrawImage(frame, c.x, c.y)
+func (p *Player) Draw(canvas *Canvas) {
+	frame := p.current.CurrentFrame()
+	canvas.DrawImage(frame, p.x, p.y)
 }

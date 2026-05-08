@@ -17,6 +17,10 @@ Koden er delt inn i noen deler:
 - `game.go` - selve spillet. Her styres camera, og vi tegner inn bakken, fiender og andre assets
 - `sprites.go` - laste inn assets, dele inn i spritesheets og logikk for animasjoner ligger her
 
+## Grid system
+
+0,0 i grid-en er der spilleren starter. Positiv x er mot høyre, positiv y er oppåver.
+
 # Assets/pixelart
 
 I mappen assets ligger pixelart.
@@ -24,7 +28,7 @@ I mappen assets ligger pixelart.
 For å editere pixelart er det enklest å bruke et program som er laget for pixelart. De beste alternativene er:
 
 - [Aseprite](https://www.aseprite.org/) - Koster 150 kroner og er veldig bra, alle youtube-tutorials bruker dette (Jeg (Anders) bruker dette). Det er open source så man kan få det gratis hvis man bygger fra source :D
-- [Pixelorama](https://pixelorama.org/) - Gratis og veldig bra, men ikke like mye brukt av "proffe"
+- https://libresprite.github.io/#!/ Open source for av aseprite
 
 Man kan importere spritesheet fra png i begge disse.
 
@@ -48,7 +52,7 @@ Pixeldugnad i juni?
 # Backlog/todos
 
 - [x] Splitte kodebasen ut i flere filer
-- [ ] x, y koordinatene er litt rotete nå. Hvor skal origo være? Gir mening at 0,0 er nederst til høyre. Nå er y = 0 midt på skjermen i noen tilfeller. Enklere for implemtantør av spill hvis dette gir mer mening
+- [x] x, y koordinatene er litt rotete nå. Hvor skal origo være? Gir mening at 0,0 er nederst til høyre. Nå er y = 0 midt på skjermen i noen tilfeller. Enklere for implemtantør av spill hvis dette gir mer mening
 - [x] Skrive en liten readme på kodebasen (Anders)
 - [x] Skrive en liten readme på pixelart (verktøy, hvordan laste inn spritesheet) (Anders)
 
