@@ -23,12 +23,9 @@ const (
 
 func main() {
 	assets := LoadAssets()
-	sheet := LoadSpriteSheet(assets, 32, 32)
-	player := Newplayer(sheet)
 
 	game := &Game{
-		player: player,
-		assets: assets,
+		currentScene: NewLauncherScene(assets),
 	}
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetWindowSize(426*4, 240*4)
