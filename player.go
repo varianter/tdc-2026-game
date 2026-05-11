@@ -16,6 +16,7 @@ type Player struct {
 	x, y          float64
 	vx, vy        float64
 	movementScale float64
+	direction     float64
 }
 
 func Newplayer(sheet *SpriteSheet) *Player {
@@ -47,6 +48,7 @@ func Newplayer(sheet *SpriteSheet) *Player {
 		},
 		x: 0, y: 0,
 		movementScale: 1.0,
+		direction:     1.0,
 	}
 	player.current = player.idleRightAnim
 
@@ -62,7 +64,7 @@ func (p *Player) switchAnim(anim *Animation) {
 
 // Calculate next position based on velocity
 func (p *Player) nextPos(dt float64) (x float64, y float64) {
-	x = math.Round(p.x + p.vx*dt)
+	x = math.Round(p.x + (p.vx * dt * p.direction))
 	y = math.Round(p.y + (p.vy * dt))
 	return x, y
 }
@@ -72,6 +74,16 @@ func (p *Player) Update(dt float64, level Level) error {
 
 	if AutoRun {
 		p.vx = WalkSpeed * p.movementScale
+
+		if p.x+float64(p.sheet.FrameW) > GameEnd {
+			p.direction = -1.0
+			p.x = GameEnd - float64(p.sheet.FrameW)
+		}
+
+		if p.x < 0 {
+			p.direction = 1.0
+			p.x = 0
+		}
 	} else {
 		p.vx = 0
 		if ebiten.IsKeyPressed(ebiten.KeyRight) {
@@ -86,10 +98,8 @@ func (p *Player) Update(dt float64, level Level) error {
 		p.vy = JumpForce
 	}
 
-	p.vy -= Gravity * dt
+	p.vy -= Gravity * dt // Always apply gravity to avoid shenanigans
 
-	// nextX := p.x + (p.vx * dt)
-	// nextY := p.y + (p.vy * dt)
 	nextX, nextY := p.nextPos(dt)
 	collision := level.collide(nextX, nextY)
 
@@ -103,7 +113,7 @@ func (p *Player) Update(dt float64, level Level) error {
 		p.y = collision.collideY.cord
 	}
 
-	// Update position based on velocity
+	// Update position with collision corrected velocity
 	x, y := p.nextPos(dt)
 	if x > p.x {
 		p.switchAnim(p.walkRightAnim)

@@ -72,23 +72,33 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	g.DrawImage(c, g.player.current.CurrentFrame(), g.player.x, g.player.y)
 
-	for _, gameObject := range g.level.gameObjects {
+	for _, gObj := range g.level.gameObjects {
 		// TODO: Hard coded size
-		w := float32(64)
-		h := float32(32)
-		p := gameObject.p
-		g.RectXY(c, float32(p.x), float32(p.y), w, h, color.RGBA{27, 130, 0, 255})
+		g.RectXY(c, float32(gObj.p.x), float32(gObj.p.y), float32(gObj.w), float32(gObj.h), color.RGBA{27, 130, 0, 255})
 	}
+
+	// Startflag
+	g.RectXY(c, float32(-4), float32(0), float32(3), float32(64), color.RGBA{30, 31, 30, 255})
+	g.RectXY(c, float32(-4), float32(64), float32(30), float32(20), color.RGBA{96, 247, 57, 255})
+
+	// EndFlag
+	g.RectXY(c, float32(GameEnd+4), float32(0), float32(3), float32(64), color.RGBA{30, 31, 30, 255})
+	g.RectXY(c, float32(GameEnd+4), float32(64), float32(30), float32(20), color.RGBA{255, 56, 147, 255})
+
 }
 
 func (g *Game) DrawImage(c *Canvas, img *ebiten.Image, x float64, y float64) {
-	zeroY := GroundY - 32 - y // Zero on grid system is players feet (ish)
-	c.DrawImage(img, x-g.camera.x, zeroY-g.camera.y)
+	// TODO: Such casting
+	c.DrawImage(img, x-g.camera.x, float64(zeroY(float32(y), float32(img.Bounds().Dy()))-float32(g.camera.y)))
 }
 
 func (g *Game) RectXY(c *Canvas, x, y, w, h float32, clr color.Color) {
-	zeroY := GroundY - 32 - y // Zero on grid system is players feet (ish)
-	vector.FillRect(c.screen, x-float32(g.camera.x), zeroY-float32(g.camera.y), w, h, clr, false)
+	vector.FillRect(c.screen, x-float32(g.camera.x), zeroY(y, h)-float32(g.camera.y), w, h, clr, false)
+}
+
+// 0,0 on grid system is bottom left of players frame on game start
+func zeroY(y, h float32) float32 {
+	return GroundY - h - y
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {

@@ -23,20 +23,34 @@ type Position struct {
 type GameObject struct {
 	p Position
 	t GameObjectType
+	w float64
+	h float64
 }
 
 type Level struct {
 	gameObjects []GameObject
 }
 
+func newPlatform(x, y float64) GameObject {
+	return GameObject{t: Platform, p: Position{x: x, y: y}, w: float64(100), h: float64(32)}
+}
+
 func NewLevel() *Level {
-	objs := LoadDefault()
+	objs := LoadLadder()
 
 	return &Level{gameObjects: objs}
 }
 
-func LoadDefault() []GameObject {
-	objs := []GameObject{{t: Platform, p: Position{x: 60, y: 0}}, {t: Platform, p: Position{x: 60, y: 20}}}
+func LoadLadder() []GameObject {
+	objs := []GameObject{
+		newPlatform(100, 20),
+		newPlatform(200, 80),
+		newPlatform(300, 140),
+		newPlatform(400, 200),
+		newPlatform(500, 140),
+		newPlatform(600, 80),
+		newPlatform(700, 20),
+	}
 
 	// objs := []GameObject{{t: Platform, p: Position{x: 60, y:20}}, {t: Platform, p: Position{x: 60, y: 0}}}
 	return objs
@@ -61,12 +75,14 @@ func (l *Level) collide(px, py float64) CollisionResult {
 	for _, obj := range l.gameObjects {
 		gp := obj.p
 		// TODO: Hard coded size
-		gpw := float64(64)
-		gph := float64(32)
+		gpw := obj.w
+		gph := obj.h
 
 		feetOffset := float64(13)
 
 		// TODO: Collide on stuff above us
+		//
+		// Collide with stuff below us
 		if (py <= gp.y+gph) &&
 			((px > gp.x && px+feetOffset < gp.x+gpw) ||
 				(px+pw-feetOffset > gp.x && px+pw < gp.x+gpw)) {

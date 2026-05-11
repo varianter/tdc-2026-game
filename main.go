@@ -19,7 +19,8 @@ const (
 	ScreenW          = 426
 	ScreenH          = 240
 	GroundDrawOffset = 6.0
-	AutoRun          = false
+	AutoRun          = true
+	GameEnd          = 1200
 )
 
 func main() {
