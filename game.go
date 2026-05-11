@@ -1,10 +1,15 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
 	"image/color"
+	"log"
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
@@ -73,8 +78,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	g.DrawImage(c, g.player.current.CurrentFrame(), g.player.x, g.player.y)
 
 	for _, gObj := range g.level.gameObjects {
-		// TODO: Hard coded size
-		g.RectXY(c, float32(gObj.p.x), float32(gObj.p.y), float32(gObj.w), float32(gObj.h), color.RGBA{27, 130, 0, 255})
+		if gObj.removed {
+			continue
+		}
+		g.RectXY(c, float32(gObj.p.x), float32(gObj.p.y), float32(gObj.w), float32(gObj.h), gObj.Color())
 	}
 
 	// Startflag
@@ -85,7 +92,28 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	g.RectXY(c, float32(GameEnd+4), float32(0), float32(3), float32(64), color.RGBA{30, 31, 30, 255})
 	g.RectXY(c, float32(GameEnd+4), float32(64), float32(30), float32(20), color.RGBA{255, 56, 147, 255})
 
+	// Draw info
+	msg := fmt.Sprintf("Score: %d", len(g.player.coins))
+	op := &text.DrawOptions{}
+	op.GeoM.Translate(0, 0) // top left of screen
+	op.ColorScale.ScaleWithColor(color.White)
+	text.Draw(screen, msg, &text.GoTextFace{
+		Source: mplusFaceSource,
+		Size:   8,
+	}, op)
 }
+
+func init() {
+	s, err := text.NewGoTextFaceSource(bytes.NewReader(fonts.MPlus1pRegular_ttf))
+	if err != nil {
+		log.Fatal(err)
+	}
+	mplusFaceSource = s
+}
+
+var (
+	mplusFaceSource *text.GoTextFaceSource
+)
 
 func (g *Game) DrawImage(c *Canvas, img *ebiten.Image, x float64, y float64) {
 	// TODO: Such casting

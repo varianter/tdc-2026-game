@@ -17,6 +17,7 @@ type Player struct {
 	vx, vy        float64
 	movementScale float64
 	direction     float64
+	coins         map[Position]struct{}
 }
 
 func Newplayer(sheet *SpriteSheet) *Player {
@@ -49,6 +50,7 @@ func Newplayer(sheet *SpriteSheet) *Player {
 		x: 0, y: 0,
 		movementScale: 1.0,
 		direction:     1.0,
+		coins:         make(map[Position]struct{}),
 	}
 	player.current = player.idleRightAnim
 
@@ -102,7 +104,9 @@ func (p *Player) Update(dt float64, level Level) error {
 
 	nextX, nextY := p.nextPos(dt)
 	collision := level.collide(nextX, nextY)
-
+	for _, coin := range collision.coin {
+		p.coins[coin] = struct{}{}
+	}
 	if collision.collideX.collision {
 		p.vx = 0
 		p.x = collision.collideX.cord
