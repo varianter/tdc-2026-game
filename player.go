@@ -18,6 +18,7 @@ type Player struct {
 	movementScale float64
 	direction     float64
 	coins         map[Position]struct{}
+	autorun       bool
 }
 
 func Newplayer(sheet *SpriteSheet) *Player {
@@ -51,6 +52,7 @@ func Newplayer(sheet *SpriteSheet) *Player {
 		movementScale: 1.0,
 		direction:     1.0,
 		coins:         make(map[Position]struct{}),
+		autorun:       AutoRun,
 	}
 	player.current = player.idleRightAnim
 
@@ -72,20 +74,14 @@ func (p *Player) nextPos(dt float64) (x float64, y float64) {
 }
 
 func (p *Player) Update(dt float64, level Level) error {
-	// Calculate velocity
-
-	if AutoRun {
+	if ebiten.IsKeyPressed(ebiten.KeyA) {
+		p.autorun = true
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyM) {
+		p.autorun = false
+	}
+	if p.autorun {
 		p.vx = WalkSpeed * p.movementScale
-
-		if p.x+float64(p.sheet.FrameW) > GameEnd {
-			p.direction = -1.0
-			p.x = GameEnd - float64(p.sheet.FrameW)
-		}
-
-		if p.x < 0 {
-			p.direction = 1.0
-			p.x = 0
-		}
 	} else {
 		p.vx = 0
 		if ebiten.IsKeyPressed(ebiten.KeyRight) {
@@ -104,6 +100,12 @@ func (p *Player) Update(dt float64, level Level) error {
 
 	nextX, nextY := p.nextPos(dt)
 	collision := level.collide(nextX, nextY)
+
+	if collision.reverse {
+		p.direction = p.direction * -1.0
+		p.x = collision.collideX.cord
+	}
+
 	for _, coin := range collision.coin {
 		p.coins[coin] = struct{}{}
 	}

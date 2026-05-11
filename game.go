@@ -71,26 +71,30 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 	w, h := screen.Bounds().Dx(), screen.Bounds().Dy()
 
-	c.Rect(0, 0, float32(w), float32((h)), color.RGBA{135, 206, 235, 255}) // light blue
+	c.Rect(0, 0, float32(w), float32((h)), color.RGBA{135, 206, 235, 255}) // sky is light blue, should be replaced with some background
 
 	c.TilingGround(g.assets.Sprites["ground"], g.camera.x, g.camera.y, 5000)
 
 	g.DrawImage(c, g.player.current.CurrentFrame(), g.player.x, g.player.y)
 
+	g.RectXY(c, float32(-20), float32(0), float32(20), float32(40), color.RGBA{105, 76, 0, 255})
+
 	for _, gObj := range g.level.gameObjects {
 		if gObj.removed {
 			continue
 		}
-		g.RectXY(c, float32(gObj.p.x), float32(gObj.p.y), float32(gObj.w), float32(gObj.h), gObj.Color())
+		// TODO: Change methods to take position as argument
+		if gObj.t == Flag {
+			g.drawFlag(c, float32(gObj.p.x), float32(gObj.p.y), gObj.Color())
+		} else {
+			g.RectXY(c, float32(gObj.p.x), float32(gObj.p.y), float32(gObj.w), float32(gObj.h), gObj.Color())
+		}
 	}
-
-	// Startflag
-	g.RectXY(c, float32(-4), float32(0), float32(3), float32(64), color.RGBA{30, 31, 30, 255})
-	g.RectXY(c, float32(-4), float32(64), float32(30), float32(20), color.RGBA{96, 247, 57, 255})
-
 	// EndFlag
 	g.RectXY(c, float32(GameEnd+4), float32(0), float32(3), float32(64), color.RGBA{30, 31, 30, 255})
 	g.RectXY(c, float32(GameEnd+4), float32(64), float32(30), float32(20), color.RGBA{255, 56, 147, 255})
+
+	// TODO: End game when touching end flag?
 
 	// Draw info
 	msg := fmt.Sprintf("Score: %d", len(g.player.coins))
@@ -114,6 +118,12 @@ func init() {
 var (
 	mplusFaceSource *text.GoTextFaceSource
 )
+
+// Startflag
+func (g *Game) drawFlag(c *Canvas, x, y float32, flagColor color.RGBA) {
+	g.RectXY(c, float32(x), float32(y), float32(4), float32(64), color.RGBA{30, 31, 30, 255})
+	g.RectXY(c, float32(x), float32(y+64), float32(30), float32(20), flagColor)
+}
 
 func (g *Game) DrawImage(c *Canvas, img *ebiten.Image, x float64, y float64) {
 	// TODO: Such casting
