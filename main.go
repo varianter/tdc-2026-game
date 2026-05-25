@@ -7,14 +7,14 @@ import (
 )
 
 const (
-	WalkSpeed        = 100.0 // px/sec
+	WalkSpeed        = 90.0 // px/sec
 	JumpSpeed        = 60
 	Gravity          = 600 // px/sec^2
 	JumpForce        = 300
 	GroundY          = 186 // 0,0 is top left
 	AirControl       = 1
 	AnimIdleFPS      = 5.0
-	AnimWalkFPS      = 12.0
+	AnimWalkFPS      = 10.0
 	AnimRunFPS       = 14.0
 	ScreenW          = 426
 	ScreenH          = 240
@@ -25,7 +25,7 @@ const (
 
 func main() {
 	assets := LoadAssets()
-	sheet := LoadSpriteSheet(assets, 32, 32)
+	sheet := LoadSpriteSheet(assets, 64, 64)
 	player := Newplayer(sheet)
 
 	game := &Game{

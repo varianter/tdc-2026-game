@@ -85,9 +85,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 		// TODO: Change methods to take position as argument
 		if gObj.t == Flag {
-			g.drawFlag(c, float32(gObj.p.x), float32(gObj.p.y), gObj.Color())
+			g.drawFlag(c, float32(gObj.s.p.x), float32(gObj.s.p.y), gObj.Color())
 		} else {
-			g.RectXY(c, float32(gObj.p.x), float32(gObj.p.y), float32(gObj.w), float32(gObj.h), gObj.Color())
+			g.RectXY(c, float32(gObj.s.p.x), float32(gObj.s.p.y), float32(gObj.s.w), float32(gObj.s.h), gObj.Color())
 		}
 	}
 	// EndFlag
@@ -115,9 +115,7 @@ func init() {
 	mplusFaceSource = s
 }
 
-var (
-	mplusFaceSource *text.GoTextFaceSource
-)
+var mplusFaceSource *text.GoTextFaceSource
 
 // Startflag
 func (g *Game) drawFlag(c *Canvas, x, y float32, flagColor color.RGBA) {

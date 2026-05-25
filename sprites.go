@@ -8,7 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
-//go:embed assets/chick.png
+//go:embed assets/tdcgjenger.png
 //go:embed assets/ground.png
 var assets embed.FS
 
@@ -22,7 +22,7 @@ func LoadAssets() *Assets {
 		Sprites:     make(map[string]*ebiten.Image),
 		Backgrounds: make(map[string]*ebiten.Image),
 	}
-	a.Sprites["player"], _, _ = ebitenutil.NewImageFromFileSystem(assets, "assets/chick.png")
+	a.Sprites["player"], _, _ = ebitenutil.NewImageFromFileSystem(assets, "assets/tdcgjenger.png")
 	a.Sprites["ground"], _, _ = ebitenutil.NewImageFromFileSystem(assets, "assets/ground.png")
 	return a
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"image/color"
-	"log"
 	"math"
 )
 
@@ -14,14 +13,88 @@ const (
 	Flag
 )
 
-var stateName = map[GameObjectType]string{
+var gameObjectName = map[GameObjectType]string{
 	Platform: "platform",
 	Coin:     "coin",
 	Flag:     "flag",
 }
 
 func (ss GameObjectType) String() string {
-	return stateName[ss]
+	return gameObjectName[ss]
+}
+
+type Square struct {
+	p Position
+	w float64
+	h float64
+}
+
+type MovingSquare struct {
+	*Square
+	*Moving
+}
+
+type Moving struct {
+	vy, vx, direction float64
+	onground          bool
+}
+
+// Calculate next position based on velocity
+func (ps *MovingSquare) nextPos(dt float64) {
+	x := ps.p.x + (ps.vx * dt * ps.direction)
+	y := ps.p.y + (ps.vy * dt)
+	ps.p = Position{x: x, y: y}
+}
+
+func (sq *Square) top() float64 {
+	return sq.p.y + sq.h
+}
+
+func (sq *Square) btm() float64 {
+	return sq.p.y
+}
+
+func (sq *Square) left() float64 {
+	return sq.p.x
+}
+
+func (sq *Square) right() float64 {
+	return sq.p.x + sq.w
+}
+
+func (sq *Square) center_y() float64 {
+	return sq.p.y + sq.h/2
+}
+
+func (sq *Square) center_x() float64 {
+	return sq.p.x + sq.w/2
+}
+
+func (sq *Square) collides(psq Square) bool {
+	if psq.p.x < sq.p.x+sq.w && // left side of player is at the left of the right side of obj
+		psq.p.x+psq.w > sq.p.x && // right side of player is at the right of the left side of obj
+		psq.p.y+psq.h > sq.p.y && // top side of player is above the bottom side of ob
+		psq.p.y < sq.p.y+sq.h { // the bottom side of player is underneath the top side of obj
+		return true
+	} else {
+		return false
+	}
+}
+
+func (obj *Square) get_overlap(p Square) Square {
+	yTop := math.Min(obj.p.y+obj.h, p.p.y+p.h)
+	yBottom := math.Max(obj.p.y, p.p.y)
+
+	xLeft := math.Max(obj.p.x, p.p.x)
+	xRight := math.Min(obj.p.x+obj.w, p.p.x+p.w)
+
+	w := xRight - xLeft
+	h := yTop - yBottom
+
+	return Square{
+		p: Position{x: xLeft, y: yBottom},
+		w: w, h: h,
+	}
 }
 
 type Position struct {
@@ -29,10 +102,8 @@ type Position struct {
 }
 
 type GameObject struct {
-	p       Position
 	t       GameObjectType
-	w       float64
-	h       float64
+	s       Square
 	removed bool
 }
 
@@ -54,15 +125,15 @@ type Level struct {
 }
 
 func newPlatform(x, y float64) GameObject {
-	return GameObject{t: Platform, p: Position{x: x, y: y}, w: float64(100), h: float64(32)}
+	return GameObject{t: Platform, s: Square{p: Position{x: x, y: y}, w: float64(100), h: float64(32)}}
 }
 
 func newCoin(x, y float64) GameObject {
-	return GameObject{t: Coin, p: Position{x: x, y: y}, w: float64(10), h: float64(10)}
+	return GameObject{t: Coin, s: Square{p: Position{x: x, y: y}, w: float64(10), h: float64(10)}}
 }
 
 func newFlag(x, y float64) GameObject {
-	return GameObject{t: Flag, p: Position{x: x, y: y}, w: float64(4), h: float64(64 + 20)}
+	return GameObject{t: Flag, s: Square{p: Position{x: x, y: y}, w: float64(4), h: float64(64 + 20)}}
 }
 
 func NewLevel() *Level {
@@ -86,14 +157,14 @@ func LoadLadder() []GameObject {
 
 		newPlatform(760, 140),
 
-		newPlatform(920, 200),
-		newFlag(920+80, 200+32),
+		newPlatform(920, 190),
+		newFlag(920+80, 190+32),
 
-		newCoin(760+45, 240+32+13),
-		newPlatform(760, 240),
+		newCoin(760+45, 400+32+13),
+		newPlatform(760, 400),
 
-		newPlatform(560, 300),
-		newFlag(560+80, 300+32),
+		newPlatform(560, 270),
+		newFlag(560+80, 270+32),
 
 		newPlatform(600, 80),
 		newCoin(600+45, 80+32+13),
@@ -104,104 +175,53 @@ func LoadLadder() []GameObject {
 	return objs
 }
 
-type CollisionResult struct {
-	collideX Collision
-	collideY Collision
-	coin     []Position
-	reverse  bool
+type Col struct {
+	idx    int
+	solved map[int]struct{}
+	t      GameObjectType
 }
 
-type Collision struct {
-	cord      float64
-	collision bool
-}
-
-func (l *Level) collide(px, py float64) CollisionResult {
-	pw := float64(32)
-	ph := float64(32)
-	pYOffset := float64(1) // TODO: Chicken sprite has 1px of empty space at the bottom
-
-	collision := CollisionResult{collideX: Collision{}, collideY: Collision{}, coin: []Position{}}
-	for i, _ := range l.gameObjects {
+func (b *Col) next(l Level, pSquare Square, coins bool) bool {
+	for i := range l.gameObjects {
+		if _, ok := b.solved[i]; ok {
+			continue
+		}
 		obj := &l.gameObjects[i]
 		if obj.removed {
 			continue
 		}
 
-		gp := obj.p
-		gpw := obj.w
-		gph := obj.h
-
-		feetOffset := float64(13)
-
-		// TODO: Collide on stuff above us
-
-		// Collide with stuff below us
-		if (py <= gp.y+gph && py+ph > gp.y+gph) && // falling past the top
-			((px > gp.x && px+feetOffset < gp.x+gpw) || // body is inside, use feetoffset to make feet have to touch
-				(px+pw-feetOffset > gp.x && px+pw < gp.x+gpw)) {
-			collideY := gp.y + gph - pYOffset
-			l.calcCollision(&collision, collideY, obj, true)
+		if obj.s.collides(pSquare) {
+			b.idx = i
+			b.t = obj.t
+			return true
 		}
-
-		if px < gp.x+gpw && px+pw > gp.x && // body passing into box
-			((py >= gp.y-10 && py <= gp.y-10+gph) || // feet colliding with top
-				(py+ph >= gp.y-10 && py+ph <= gp.y-10+gph)) { // head colliding with bottom
-			l.calcCollision(&collision, collideX(px, pw, gp.x, gpw), obj, false)
-		}
-
-		// Collide with ground
-		if py <= 0 {
-			collision.collideY.collision = true
-			collision.collideY.cord = 0
-		}
-
-		if px < 0 {
-			collision.collideX.collision = true
-			collision.collideX.cord = 0
-			collision.reverse = true
-		}
-
 	}
-	return collision
+
+	return false
 }
 
-func collideX(px, pw, gpx, gpw float64) float64 {
-	if px < gpx+(gpw/2) { // going right
-		return gpx - pw - 1
-	} else { // going left
-		return gpx + gpw + 1
+func (l *Level) collideObj(pSquare Square, gameObjIdx int) bool {
+	obj := &l.gameObjects[gameObjIdx]
+	if obj.removed || obj.t != Platform {
+		return false
 	}
+
+	if obj.s.collides(pSquare) {
+		return true
+	}
+	return false
 }
 
-// Returns true if the game object is to be removed
-func (l *Level) calcCollision(collision *CollisionResult, cord float64, gobj *GameObject, yCoords bool) {
-	switch gobj.t {
-	case Platform:
-		{
-			if yCoords {
-				collision.collideY.collision = true
-				collision.collideY.cord = math.Max(cord, collision.collideY.cord)
-			} else {
-				collision.collideX.collision = true
-				collision.collideX.cord = math.Max(cord, collision.collideX.cord)
-			}
-		}
-	case Coin:
-		{
-			collision.coin = append(collision.coin, gobj.p)
-			gobj.removed = true
-		}
-	case Flag:
-		{
-			if !yCoords {
-				collision.collideX.cord = cord
-			}
-			collision.reverse = true
-			gobj.removed = true
-		}
+func (l *Level) overlap(pSquare Square, gambObjIdx int) (Square, Square) {
+	s := l.gameObjects[gambObjIdx].s
 
-	default:
-		log.Printf("calcCollision: Unknown GameObjectType %s \n", gobj.t.String())
+	return s.get_overlap(pSquare), s
+}
+
+func (l *Level) register_collision(gameObjIdx int) {
+	obj := &l.gameObjects[gameObjIdx]
+	if obj.t == Coin || obj.t == Flag {
+		obj.removed = true
 	}
 }
