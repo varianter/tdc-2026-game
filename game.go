@@ -83,7 +83,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		if gObj.removed {
 			continue
 		}
-		// TODO: Change methods to take position as argument
 		if gObj.t == Flag {
 			g.drawFlag(c, float32(gObj.s.p.x), float32(gObj.s.p.y), gObj.Color())
 		} else {

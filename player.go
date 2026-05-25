@@ -11,7 +11,6 @@ type Player struct {
 	idleRightAnim *Animation
 	idleLeftAnim  *Animation
 	current       *Animation
-	// TODO: Move these to a square thing
 	vx, vy        float64
 	x, y          float64
 	h, w          float64
@@ -60,7 +59,6 @@ func Newplayer(sheet *SpriteSheet) *Player {
 		autorun:       AutoRun,
 		onground:      true,
 
-		// collisionOffsetX: 0,
 		collisionOffsetX:   15,
 		collisionOffsetTop: 15,
 	}
@@ -102,7 +100,6 @@ func (p *Player) Update(dt float64, level Level) error {
 	pSquare := p.ToCollisionSquare()
 	pSquare.nextPos(dt)
 
-	// Collide with platforms first
 	pc := Col{idx: -1, solved: make(map[int]struct{})}
 	for pc.next(level, *pSquare.Square, false) {
 		overlap, objSquare := level.overlap(*pSquare.Square, pc.idx)
@@ -110,8 +107,8 @@ func (p *Player) Update(dt float64, level Level) error {
 		if pc.t == Flag {
 			pSquare.direction = pSquare.direction * -1.0
 
-			playerCenter := pSquare.p.x + pSquare.w/2
-			flagCenter := objSquare.p.x + objSquare.w/2
+			playerCenter := pSquare.center_x()
+			flagCenter := objSquare.center_x()
 			if playerCenter < flagCenter { // player is to the left of block
 				pSquare.p.x = objSquare.left() - pSquare.w - 1
 			} else { // player is to the right of block
@@ -167,12 +164,8 @@ func (p *Player) Update(dt float64, level Level) error {
 		pSquare.direction = pSquare.direction * -1.0
 	}
 
-	// Collide with
-	cc := Col{idx: -1, solved: make(map[int]struct{})}
-	for cc.next(level, *pSquare.Square, false) {
-	}
-
 	nextX := pSquare.p.x - p.collisionOffsetX
+
 	// Update animation
 	if nextX > p.x {
 		p.switchAnim(p.walkRightAnim)
@@ -193,8 +186,8 @@ func (p *Player) Update(dt float64, level Level) error {
 }
 
 func (ps *MovingSquare) collide_x(s Square) {
-	playerCenter := ps.p.x + ps.w/2
-	blockCenter := s.p.x + s.w/2
+	playerCenter := ps.center_x()
+	blockCenter := s.center_x()
 	if playerCenter < blockCenter { // player is to the left of block
 		ps.p.x = s.left() - ps.w
 	} else { // player is to the right of block
@@ -204,8 +197,8 @@ func (ps *MovingSquare) collide_x(s Square) {
 }
 
 func (ps *MovingSquare) collide_y(s Square) {
-	playerCenter := ps.p.y + ps.h/2
-	blockCenter := s.p.y + s.h/2
+	playerCenter := ps.center_y()
+	blockCenter := s.center_y()
 	if playerCenter >= blockCenter { // player is above block
 		ps.p.y = s.top()
 		ps.vy = 0
