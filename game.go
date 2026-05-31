@@ -71,7 +71,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 	w, h := screen.Bounds().Dx(), screen.Bounds().Dy()
 
-	c.Rect(0, 0, float32(w), float32((h)), color.RGBA{135, 206, 235, 255}) // sky is light blue, should be replaced with some background
+	c.Rect(0, 0, float32(w), float32(h), color.RGBA{135, 206, 235, 255}) // sky is light blue, should be replaced with some background
 
 	c.TilingGround(g.assets.Sprites["ground"], g.camera.x, g.camera.y, 5000)
 
@@ -96,7 +96,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// TODO: End game when touching end flag?
 
 	// Draw info
-	msg := fmt.Sprintf("Score: %d", len(g.player.coins))
+	msg := fmt.Sprintf("Score: %d - TPS: %f", g.player.coins, ebiten.ActualTPS())
 	op := &text.DrawOptions{}
 	op.GeoM.Translate(0, 0) // top left of screen
 	op.ColorScale.ScaleWithColor(color.White)

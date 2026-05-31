@@ -9,9 +9,9 @@ import (
 const (
 	WalkSpeed        = 90.0 // px/sec
 	JumpSpeed        = 60
-	Gravity          = 600 // px/sec^2
+	Gravity          = 700 // px/sec^2
 	JumpForce        = 300
-	GroundY          = 186 // 0,0 is top left
+	GroundY          = 186
 	AirControl       = 1
 	AnimIdleFPS      = 5.0
 	AnimWalkFPS      = 10.0
@@ -20,7 +20,7 @@ const (
 	ScreenH          = 240
 	GroundDrawOffset = 6.0
 	AutoRun          = true
-	GameEnd          = 1200
+	GameEnd          = 1200 // TODO: Currently unused
 )
 
 func main() {

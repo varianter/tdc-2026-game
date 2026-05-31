@@ -18,7 +18,7 @@ type Player struct {
 	onground      bool
 	movementScale float64
 
-	coins              map[Position]struct{}
+	coins              int
 	autorun            bool
 	collisionOffsetX   float64
 	collisionOffsetTop float64
@@ -55,7 +55,7 @@ func Newplayer(sheet *SpriteSheet) *Player {
 		h: 64, w: 64,
 		movementScale: 1.0,
 		direction:     1.0,
-		coins:         make(map[Position]struct{}),
+		coins:         0,
 		autorun:       AutoRun,
 		onground:      true,
 
@@ -98,71 +98,9 @@ func (p *Player) Update(dt float64, level Level) error {
 	}
 
 	pSquare := p.ToCollisionSquare()
-	pSquare.nextPos(dt)
 
-	pc := Col{idx: -1, solved: make(map[int]struct{})}
-	for pc.next(level, *pSquare.Square, false) {
-		overlap, objSquare := level.overlap(*pSquare.Square, pc.idx)
-
-		if pc.t == Flag {
-			pSquare.direction = pSquare.direction * -1.0
-
-			playerCenter := pSquare.center_x()
-			flagCenter := objSquare.center_x()
-			if playerCenter < flagCenter { // player is to the left of block
-				pSquare.p.x = objSquare.left() - pSquare.w - 1
-			} else { // player is to the right of block
-				pSquare.p.x = objSquare.right() + 1
-			}
-			level.register_collision(pc.idx)
-			continue
-		}
-		if pc.t == Platform {
-			if overlap.w > overlap.h { // y is shallowest so solve y collision first
-				pSquare.collide_y(objSquare)
-				pSquare.nextPos(dt) // dont do this,get new pos
-
-				if level.collideObj(*pSquare.Square, pc.idx) {
-					pSquare.collide_x(objSquare)
-					pSquare.nextPos(dt)
-				}
-			} else {
-				pSquare.collide_x(objSquare)
-				pSquare.nextPos(dt)
-
-				if level.collideObj(*pSquare.Square, pc.idx) {
-					pSquare.collide_y(objSquare)
-
-					pSquare.nextPos(dt)
-				}
-			}
-			continue
-		}
-
-		if pc.t == Coin {
-			p.coins[objSquare.p] = struct{}{}
-
-			level.register_collision(pc.idx)
-		}
-		pc.solved[pc.idx] = struct{}{}
-	}
-
-	// Collide with ground
-	if pSquare.p.y <= 0 {
-		pSquare.p.y = 0
-		pSquare.vy = 0
-		pSquare.onground = true
-	}
-
-	if !pSquare.onground {
-		pSquare.vy -= Gravity * dt // Always apply gravity to avoid shenanigans
-	}
-
-	// Turn around at start flag
-	if pSquare.p.x < 0 {
-		pSquare.p.x = 0
-		pSquare.direction = pSquare.direction * -1.0
-	}
+	coins := level.resolveCollisions(&pSquare, dt)
+	p.coins += coins
 
 	nextX := pSquare.p.x - p.collisionOffsetX
 
@@ -183,30 +121,6 @@ func (p *Player) Update(dt float64, level Level) error {
 
 	p.current.Update(dt)
 	return nil
-}
-
-func (ps *MovingSquare) collide_x(s Square) {
-	playerCenter := ps.center_x()
-	blockCenter := s.center_x()
-	if playerCenter < blockCenter { // player is to the left of block
-		ps.p.x = s.left() - ps.w
-	} else { // player is to the right of block
-		ps.p.x = s.right()
-	}
-	ps.vx = 0
-}
-
-func (ps *MovingSquare) collide_y(s Square) {
-	playerCenter := ps.center_y()
-	blockCenter := s.center_y()
-	if playerCenter >= blockCenter { // player is above block
-		ps.p.y = s.top()
-		ps.vy = 0
-		ps.onground = true
-	} else { // player is below block
-		ps.p.y = s.btm() - ps.h
-		ps.vy = 0
-	}
 }
 
 func (p *Player) ToCollisionSquare() MovingSquare {
