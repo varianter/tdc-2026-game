@@ -7,20 +7,21 @@ import (
 )
 
 const (
-	WalkSpeed        = 90.0 // px/sec
-	JumpSpeed        = 60
-	Gravity          = 700 // px/sec^2
-	JumpForce        = 300
-	GroundY          = 186
-	AirControl       = 1
-	AnimIdleFPS      = 5.0
-	AnimWalkFPS      = 10.0
-	AnimRunFPS       = 14.0
-	ScreenW          = 426
-	ScreenH          = 240
-	GroundDrawOffset = 6.0
-	AutoRun          = true
-	GameEnd          = 1200 // TODO: Currently unused
+	WalkSpeed         = 90.0 // px/sec
+	JumpSpeed         = 60
+	Gravity           = 700 // px/sec^2
+	JumpForce         = 300
+	GroundY           = 186
+	AirControl        = 1
+	AnimIdleFPS       = 5.0
+	AnimWalkFPS       = 10.0
+	AnimRunFPS        = 14.0
+	ScreenW           = 426
+	ScreenH           = 240
+	GroundDrawOffset  = 6.0
+	AutoRun           = true
+	GameEnd           = 1200   // TODO: Currently unused
+	CollisionAlgoritm = "grid" // "grid" or "all"
 )
 
 func main() {
