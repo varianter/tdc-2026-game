@@ -2,7 +2,6 @@ package main
 
 import (
 	"testing"
-	"time"
 )
 
 // Platform at (100, 20): left=100, right=200, btm=20, top=52
@@ -17,29 +16,12 @@ func clonePlayer(p *MovingSquare) *MovingSquare {
 	return &MovingSquare{&sq, &mv}
 }
 
-func runBothCollisionMethods(t *testing.T, player *MovingSquare, platform GameObject, dt float64, check func(t *testing.T, p *MovingSquare)) {
+func runCollision(t *testing.T, player *MovingSquare, platform GameObject, dt float64, check func(t *testing.T, p *MovingSquare)) {
 	t.Helper()
-
 	l := NewLevelFromObjects([]GameObject{platform})
 	p := clonePlayer(player)
-
-	start := time.Now()
-	l.resolveCollisionsInspectAll(p, dt)
-	inspectAllDur := time.Since(start)
-
-	t.Logf("resolveCollisionsInspectAll took %v", inspectAllDur)
+	l.resolveCollisions(p, dt)
 	check(t, p)
-
-	// Reset player for grid test
-	l2 := NewLevelFromObjects([]GameObject{platform})
-	p2 := clonePlayer(player)
-
-	start = time.Now()
-	l2.resolveCollisionsGrid(p2, dt)
-	gridDur := time.Since(start)
-
-	t.Logf("resolveCollisionsGrid took %v", gridDur)
-	check(t, p2)
 }
 
 func TestCollisionXAxisFromLeft(t *testing.T) {
@@ -51,7 +33,7 @@ func TestCollisionXAxisFromLeft(t *testing.T) {
 	dt := 1.0 / 60
 	platform := newPlatform(100, 20)
 
-	runBothCollisionMethods(t, NewTestSquare(52, 20, 1, 0), platform, dt, func(t *testing.T, p *MovingSquare) {
+	runCollision(t, NewTestSquare(52, 20, 1, 0), platform, dt, func(t *testing.T, p *MovingSquare) {
 		// After collision, player right edge should be pushed back to platform left (100).
 		// player.p.x (left of collision square) should be 100 - 34 = 66
 		expectedX := platform.s.left() - p.w
@@ -71,7 +53,7 @@ func TestCollisionXAxisFromRight(t *testing.T) {
 	dt := 1.0 / 60
 	platform := newPlatform(100, 20)
 
-	runBothCollisionMethods(t, NewTestSquare(184, 20, -1, 0), platform, dt, func(t *testing.T, p *MovingSquare) {
+	runCollision(t, NewTestSquare(184, 20, -1, 0), platform, dt, func(t *testing.T, p *MovingSquare) {
 		// After collision, player left edge pushed to platform right (200).
 		expectedX := platform.s.right()
 		if p.p.x != expectedX {
@@ -92,7 +74,7 @@ func TestCollisionYAxisFromAbove(t *testing.T) {
 	dt := 1.0 / 60
 	platform := newPlatform(100, 20)
 
-	runBothCollisionMethods(t, NewTestSquare(118, 50, 1, -50), platform, dt, func(t *testing.T, p *MovingSquare) {
+	runCollision(t, NewTestSquare(118, 50, 1, -50), platform, dt, func(t *testing.T, p *MovingSquare) {
 		// After collision, player btm should be at platform top (52).
 		expectedY := platform.s.top()
 		if p.p.y != expectedY {
@@ -116,7 +98,7 @@ func TestCollisionYAxisFromBelow(t *testing.T) {
 	dt := 1.0 / 60
 	platform := newPlatform(100, 100)
 
-	runBothCollisionMethods(t, NewTestSquare(118, 52, 1, 50), platform, dt, func(t *testing.T, p *MovingSquare) {
+	runCollision(t, NewTestSquare(118, 52, 1, 50), platform, dt, func(t *testing.T, p *MovingSquare) {
 		// After collision, player top (p.y + p.h) should be pushed to platform btm (100).
 		// i.e. p.p.y = platform.btm() - p.h
 		expectedY := platform.s.btm() - p.h
@@ -131,23 +113,13 @@ func TestCollisionYAxisFromBelow(t *testing.T) {
 	})
 }
 
-func BenchmarkCollisionInspectAll(b *testing.B) {
-	l := NewLevelBig(20000)
-	p := NewTestSquare(0, 0, 1, 0)
-	dt := 1.0 / 60
-
-	for b.Loop() {
-		l.resolveCollisionsInspectAll(p, dt)
-	}
-}
-
 func BenchmarkCollisionGrid(b *testing.B) {
 	l := NewLevelBig(20000)
 	p := NewTestSquare(0, 0, 1, 0)
 	dt := 1.0 / 60
 
 	for b.Loop() {
-		l.resolveCollisionsGrid(p, dt)
+		l.resolveCollisions(p, dt)
 	}
 }
 

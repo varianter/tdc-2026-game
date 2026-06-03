@@ -5,18 +5,18 @@ import (
 )
 
 type Player struct {
-	sheet         *SpriteSheet
-	walkRightAnim *Animation
-	walkLeftAnim  *Animation
-	idleRightAnim *Animation
-	idleLeftAnim  *Animation
-	current       *Animation
-	vx, vy        float64
-	x, y          float64
-	h, w          float64
-	direction     float64
-	onground      bool
-	movementScale float64
+	sheet            *SpriteSheet
+	walkRightAnim    *Animation
+	walkLeftAnim     *Animation
+	idleRightAnim    *Animation
+	idleLeftAnim     *Animation
+	currentAnimation *Animation
+	vx, vy           float64
+	x, y             float64
+	h, w             float64
+	direction        float64
+	onground         bool
+	movementScale    float64
 
 	coins              int
 	autorun            bool
@@ -59,18 +59,20 @@ func Newplayer(sheet *SpriteSheet) *Player {
 		autorun:       AutoRun,
 		onground:      true,
 
+		// The sprite is 64x64 but the actual drawn pixels are smaller
+		// These values are to make it look more correct
 		collisionOffsetX:   15,
 		collisionOffsetTop: 15,
 	}
-	player.current = player.idleRightAnim
+	player.currentAnimation = player.idleRightAnim
 
 	return player
 }
 
 func (p *Player) switchAnim(anim *Animation) {
-	if p.current != anim {
+	if p.currentAnimation != anim {
 		anim.elapsed = 0
-		p.current = anim
+		p.currentAnimation = anim
 	}
 }
 
@@ -105,6 +107,7 @@ func (p *Player) Update(dt float64, level Level) error {
 	nextX := pSquare.p.x - p.collisionOffsetX
 
 	// Update animation
+	// TODO: Handle this in the draw function
 	if nextX > p.x {
 		p.switchAnim(p.walkRightAnim)
 	}
@@ -119,7 +122,7 @@ func (p *Player) Update(dt float64, level Level) error {
 	p.direction = pSquare.direction
 	p.onground = pSquare.onground
 
-	p.current.Update(dt)
+	p.currentAnimation.Update(dt)
 	return nil
 }
 
@@ -132,6 +135,6 @@ func (p *Player) ToCollisionSquare() MovingSquare {
 }
 
 func (p *Player) Draw(canvas *Canvas) {
-	frame := p.current.CurrentFrame()
+	frame := p.currentAnimation.CurrentFrame()
 	canvas.DrawImage(frame, p.x, p.y)
 }

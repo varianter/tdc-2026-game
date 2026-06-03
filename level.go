@@ -2,9 +2,7 @@ package main
 
 import (
 	"image/color"
-	"log"
 	"math"
-	"time"
 )
 
 type GameObjectType int
@@ -259,113 +257,45 @@ func BigLadder(iterations int) []GameObject {
 	return objs
 }
 
-func (l *Level) resolveCollisions(pSquare *MovingSquare, dt float64) int {
-	start := time.Now()
-	var result int
-	if CollisionAlgoritm == "grid" {
-		result = l.resolveCollisionsGrid(pSquare, dt)
-	} else {
-		result = l.resolveCollisionsInspectAll(pSquare, dt)
+// handleCollision returns 1 if a coin was collected, 0 otherwise
+func (l *Level) handleCollision(pSquare *MovingSquare, dt float64, overlap Square, objSquare Square, objType GameObjectType, objIdx int) int {
+	if objType == Flag {
+		pSquare.direction = pSquare.direction * -1.0
+
+		playerCenter := pSquare.center_x()
+		flagCenter := objSquare.center_x()
+		if playerCenter < flagCenter { // player is to the left of block
+			pSquare.p.x = objSquare.left() - pSquare.w - 1
+		} else { // player is to the right of block
+			pSquare.p.x = objSquare.right() + 1
+		}
+		l.register_collision(objIdx)
 	}
-	log.Printf("resolveCollisions [%s]: %v", CollisionAlgoritm, time.Since(start))
-	return result
-}
-
-type Col struct {
-	idx    int
-	solved map[int]struct{}
-	coins  int
-	t      GameObjectType
-}
-
-// Returns the first colliding object
-func (b *Col) next(l *Level, pSquare Square, coins bool) bool {
-	for i := range l.gameObjects {
-		if _, ok := b.solved[i]; ok {
-			continue
-		}
-		obj := &l.gameObjects[i]
-		if obj.removed {
-			continue
-		}
-
-		if obj.s.collides(pSquare) {
-			b.idx = i
-			b.t = obj.t
-			return true
-		}
+	if objType == Coin {
+		l.register_collision(objIdx)
+		return 1
 	}
+	if objType == Platform {
+		if overlap.w > overlap.h { // y is shallowest so solve y collision first
+			pSquare.collide_y(objSquare)
+			pSquare.nextPos(dt) // dont do this,get new pos
 
-	return false
-}
-
-func (l *Level) resolveCollisionsInspectAll(pSquare *MovingSquare, dt float64) int {
-	pSquare.nextPos(dt)
-
-	pc := Col{idx: -1, solved: make(map[int]struct{})}
-	// We loop through the objects until we dont collide with anything
-	for pc.next(l, *pSquare.Square, false) {
-		overlap, objSquare := l.overlap(*pSquare.Square, pc.idx)
-
-		if pc.t == Flag {
-			pSquare.direction = pSquare.direction * -1.0
-
-			playerCenter := pSquare.center_x()
-			flagCenter := objSquare.center_x()
-			if playerCenter < flagCenter { // player is to the left of block
-				pSquare.p.x = objSquare.left() - pSquare.w - 1
-			} else { // player is to the right of block
-				pSquare.p.x = objSquare.right() + 1
-			}
-			l.register_collision(pc.idx)
-		}
-		if pc.t == Platform {
-			if overlap.w > overlap.h { // y is shallowest so solve y collision first
-				pSquare.collide_y(objSquare)
-				pSquare.nextPos(dt) // dont do this,get new pos
-
-				if l.collideObj(*pSquare.Square, pc.idx) {
-					pSquare.collide_x(objSquare)
-					pSquare.nextPos(dt)
-				}
-			} else {
+			if l.collideObj(*pSquare.Square, objIdx) {
 				pSquare.collide_x(objSquare)
 				pSquare.nextPos(dt)
+			}
+		} else {
+			pSquare.collide_x(objSquare)
+			pSquare.nextPos(dt)
 
-				if l.collideObj(*pSquare.Square, pc.idx) {
-					pSquare.collide_y(objSquare)
+			if l.collideObj(*pSquare.Square, objIdx) {
+				pSquare.collide_y(objSquare)
 
-					pSquare.nextPos(dt)
-				}
+				pSquare.nextPos(dt)
 			}
 		}
-
-		if pc.t == Coin {
-			pc.coins++
-
-			l.register_collision(pc.idx)
-		}
-		pc.solved[pc.idx] = struct{}{}
 	}
-
-	// Collide with ground
-	if pSquare.p.y <= 0 {
-		pSquare.p.y = 0
-		pSquare.vy = 0
-		pSquare.onground = true
-	}
-
-	if !pSquare.onground {
-		pSquare.vy -= Gravity * dt // Always apply gravity to avoid shenanigans
-	}
-
-	// Turn around at start flag
-	if pSquare.p.x < 0 {
-		pSquare.p.x = 0
-		pSquare.direction = pSquare.direction * -1.0
-	}
-
-	return pc.coins
+	return 0
 }
 
 func buildGrid(gameObjects []GameObject, cell_size float64) map[Position][]int {
@@ -395,7 +325,7 @@ func buildGrid(gameObjects []GameObject, cell_size float64) map[Position][]int {
 	return grid
 }
 
-func (l *Level) resolveCollisionsGrid(pSquare *MovingSquare, dt float64) int {
+func (l *Level) findClosestElements(pSquare *MovingSquare) map[int]struct{} {
 	elements := make(map[int]struct{})
 	grid_x1 := math.Floor(pSquare.p.x / l.cell_size)
 	grid_y1 := math.Floor(pSquare.p.y / l.cell_size)
@@ -411,51 +341,20 @@ func (l *Level) resolveCollisionsGrid(pSquare *MovingSquare, dt float64) int {
 			}
 		}
 	}
+	return elements
+}
+
+func (l *Level) resolveCollisions(pSquare *MovingSquare, dt float64) int {
+	elements := l.findClosestElements(pSquare)
 
 	pSquare.nextPos(dt)
-	pc := ColLoop{idx: -1, elements: &elements}
+	pc := ColIterator{idx: -1, elements: &elements}
 	// We loop through the objects until we dont collide with anything
 	for pc.next(l, *pSquare.Square, false) {
 		overlap, objSquare := l.overlap(*pSquare.Square, pc.idx)
 
-		if pc.t == Flag {
-			pSquare.direction = pSquare.direction * -1.0
+		pc.coins += l.handleCollision(pSquare, dt, overlap, objSquare, pc.t, pc.idx)
 
-			playerCenter := pSquare.center_x()
-			flagCenter := objSquare.center_x()
-			if playerCenter < flagCenter { // player is to the left of block
-				pSquare.p.x = objSquare.left() - pSquare.w - 1
-			} else { // player is to the right of block
-				pSquare.p.x = objSquare.right() + 1
-			}
-			l.register_collision(pc.idx)
-		}
-		if pc.t == Platform {
-			if overlap.w > overlap.h { // y is shallowest so solve y collision first
-				pSquare.collide_y(objSquare)
-				pSquare.nextPos(dt) // dont do this,get new pos
-
-				if l.collideObj(*pSquare.Square, pc.idx) {
-					pSquare.collide_x(objSquare)
-					pSquare.nextPos(dt)
-				}
-			} else {
-				pSquare.collide_x(objSquare)
-				pSquare.nextPos(dt)
-
-				if l.collideObj(*pSquare.Square, pc.idx) {
-					pSquare.collide_y(objSquare)
-
-					pSquare.nextPos(dt)
-				}
-			}
-		}
-
-		if pc.t == Coin {
-			pc.coins++
-
-			l.register_collision(pc.idx)
-		}
 		delete(*pc.elements, pc.idx)
 	}
 
@@ -479,7 +378,7 @@ func (l *Level) resolveCollisionsGrid(pSquare *MovingSquare, dt float64) int {
 	return pc.coins
 }
 
-type ColLoop struct {
+type ColIterator struct {
 	idx      int
 	elements *map[int]struct{}
 	coins    int
@@ -487,13 +386,13 @@ type ColLoop struct {
 }
 
 // Returns the first colliding object
-func (b *ColLoop) next(l *Level, pSquare Square, coins bool) bool {
-	for i := range *b.elements {
+func (citer *ColIterator) next(l *Level, pSquare Square, coins bool) bool {
+	for i := range *citer.elements { // TODO: Might make more sense to start from idx instead of starting from the top every time
 		obj := &l.gameObjects[i]
 
 		if obj.s.collides(pSquare) {
-			b.idx = i
-			b.t = obj.t
+			citer.idx = i
+			citer.t = obj.t
 			return true
 		}
 	}

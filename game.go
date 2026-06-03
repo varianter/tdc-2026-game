@@ -75,7 +75,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	c.TilingGround(g.assets.Sprites["ground"], g.camera.x, g.camera.y, 5000)
 
-	g.DrawImage(c, g.player.current.CurrentFrame(), g.player.x, g.player.y)
+	g.DrawImage(c, g.player.currentAnimation.CurrentFrame(), g.player.x, g.player.y)
 
 	g.RectXY(c, float32(-20), float32(0), float32(20), float32(40), color.RGBA{105, 76, 0, 255})
 
