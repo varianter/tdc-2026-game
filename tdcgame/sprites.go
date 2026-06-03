@@ -1,4 +1,4 @@
-package main
+package tdcgame
 
 import (
 	"embed"
@@ -8,16 +8,12 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
-//go:embed assets/tdcgjenger.png
-//go:embed assets/ground.png
-var assets embed.FS
-
 type Assets struct {
 	Sprites     map[string]*ebiten.Image
 	Backgrounds map[string]*ebiten.Image
 }
 
-func LoadAssets() *Assets {
+func LoadAssets(assets embed.FS) *Assets {
 	a := &Assets{
 		Sprites:     make(map[string]*ebiten.Image),
 		Backgrounds: make(map[string]*ebiten.Image),

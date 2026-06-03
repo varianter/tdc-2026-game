@@ -1,4 +1,4 @@
-package main
+package tdcgame
 
 import (
 	"image/color"
@@ -35,14 +35,14 @@ type MovingSquare struct {
 }
 
 type Moving struct {
-	vy, vx, direction float64
-	onground          bool
+	Vy, Vx, Direction float64
+	Onground          bool
 }
 
 // Calculate next position based on velocity
 func (ps *MovingSquare) nextPos(dt float64) {
-	x := ps.p.x + (ps.vx * dt * ps.direction)
-	y := ps.p.y + (ps.vy * dt)
+	x := ps.p.x + (ps.Vx * dt * ps.Direction)
+	y := ps.p.y + (ps.Vy * dt)
 	ps.p = Position{x: x, y: y}
 }
 
@@ -54,7 +54,7 @@ func (ps *MovingSquare) collide_x(s Square) {
 	} else { // player is to the right of block
 		ps.p.x = s.right()
 	}
-	ps.vx = 0
+	ps.Vx = 0
 }
 
 func (ps *MovingSquare) collide_y(s Square) {
@@ -62,11 +62,11 @@ func (ps *MovingSquare) collide_y(s Square) {
 	blockCenter := s.center_y()
 	if playerCenter >= blockCenter { // player is above block
 		ps.p.y = s.top()
-		ps.vy = 0
-		ps.onground = true
+		ps.Vy = 0
+		ps.Onground = true
 	} else { // player is below block
 		ps.p.y = s.btm() - ps.h
-		ps.vy = 0
+		ps.Vy = 0
 	}
 }
 
@@ -150,26 +150,16 @@ type Level struct {
 	cell_size   float64
 }
 
-func newPlatform(x, y float64) GameObject {
+func NewPlatform(x, y float64) GameObject {
 	return GameObject{t: Platform, s: Square{p: Position{x: x, y: y}, w: float64(100), h: float64(32)}}
 }
 
-func newCoin(x, y float64) GameObject {
+func NewCoin(x, y float64) GameObject {
 	return GameObject{t: Coin, s: Square{p: Position{x: x, y: y}, w: float64(10), h: float64(10)}}
 }
 
-func newFlag(x, y float64) GameObject {
+func NewFlag(x, y float64) GameObject {
 	return GameObject{t: Flag, s: Square{p: Position{x: x, y: y}, w: float64(4), h: float64(64 + 20)}}
-}
-
-func NewLevelSmall() *Level {
-	objs := SmallLadder()
-	return NewLevelFromObjects(objs)
-}
-
-func NewLevel() *Level {
-	objs := SmallLadder()
-	return NewLevelFromObjects(objs)
 }
 
 func NewLevelFromObjects(objs []GameObject) *Level {
@@ -181,75 +171,42 @@ func NewLevelBig(iterations int) *Level {
 	return NewLevelFromObjects(objs)
 }
 
-func SmallLadder() []GameObject {
-	objs := []GameObject{
-		newPlatform(100, 20),
-		newCoin(100+45, 20+32+13),
-		newPlatform(200, 80),
-		newCoin(200+45, 80+32+13),
-		newPlatform(300, 140),
-		newCoin(300+45, 140+32+13),
-		newPlatform(400, 200),
-		newCoin(400+45, 200+32+13),
-		newPlatform(500, 140),
-		newCoin(500+45, 140+32+13),
-
-		newPlatform(760, 140),
-
-		newPlatform(920, 190),
-		newFlag(920+80, 190+32),
-
-		newCoin(760+45, 400+32+13),
-		newPlatform(760, 400),
-
-		newPlatform(560, 270),
-		newFlag(560+80, 270+32),
-
-		newPlatform(600, 80),
-		newCoin(600+45, 80+32+13),
-		newPlatform(700, 20),
-		newCoin(700+45, 20+32+13),
-	}
-
-	return objs
-}
-
 func BigLadder(iterations int) []GameObject {
 	objs := []GameObject{}
 
 	startIdx := float64(100)
 	// TODO: Currently start struggling with 4000 iterations (= 84 000 game objects)
 	for i := 0; i < iterations; i++ {
-		objs = append(objs, newPlatform(startIdx, 20))
-		objs = append(objs, newCoin(startIdx+45, 20+32+13))
+		objs = append(objs, NewPlatform(startIdx, 20))
+		objs = append(objs, NewCoin(startIdx+45, 20+32+13))
 
-		objs = append(objs, newPlatform(startIdx+100, 80))
-		objs = append(objs, newCoin(startIdx+100+45, 80+32+13))
+		objs = append(objs, NewPlatform(startIdx+100, 80))
+		objs = append(objs, NewCoin(startIdx+100+45, 80+32+13))
 
-		objs = append(objs, newPlatform(startIdx+200, 140))
-		objs = append(objs, newCoin(startIdx+200+45, 140+32+13))
+		objs = append(objs, NewPlatform(startIdx+200, 140))
+		objs = append(objs, NewCoin(startIdx+200+45, 140+32+13))
 
-		objs = append(objs, newPlatform(startIdx+300, 200))
-		objs = append(objs, newCoin(startIdx+300+45, 200+32+13))
+		objs = append(objs, NewPlatform(startIdx+300, 200))
+		objs = append(objs, NewCoin(startIdx+300+45, 200+32+13))
 
-		objs = append(objs, newPlatform(startIdx+400, 140))
-		objs = append(objs, newCoin(startIdx+400+45, 140+32+13))
+		objs = append(objs, NewPlatform(startIdx+400, 140))
+		objs = append(objs, NewCoin(startIdx+400+45, 140+32+13))
 
-		objs = append(objs, newPlatform(startIdx+660, 140))
+		objs = append(objs, NewPlatform(startIdx+660, 140))
 
-		objs = append(objs, newPlatform(startIdx+820, 190))
-		objs = append(objs, newFlag(startIdx+820+80, 190+32))
+		objs = append(objs, NewPlatform(startIdx+820, 190))
+		objs = append(objs, NewFlag(startIdx+820+80, 190+32))
 
-		objs = append(objs, newCoin(startIdx+660+45, 400+32+13))
-		objs = append(objs, newPlatform(startIdx+660, 400))
+		objs = append(objs, NewCoin(startIdx+660+45, 400+32+13))
+		objs = append(objs, NewPlatform(startIdx+660, 400))
 
-		objs = append(objs, newPlatform(startIdx+460, 270))
-		objs = append(objs, newFlag(startIdx+460+80, 270+32))
+		objs = append(objs, NewPlatform(startIdx+460, 270))
+		objs = append(objs, NewFlag(startIdx+460+80, 270+32))
 
-		objs = append(objs, newPlatform(startIdx+500, 80))
-		objs = append(objs, newCoin(startIdx+500+45, 80+32+13))
-		objs = append(objs, newPlatform(startIdx+500, 20))
-		objs = append(objs, newCoin(startIdx+500+45, 20+32+13))
+		objs = append(objs, NewPlatform(startIdx+500, 80))
+		objs = append(objs, NewCoin(startIdx+500+45, 80+32+13))
+		objs = append(objs, NewPlatform(startIdx+500, 20))
+		objs = append(objs, NewCoin(startIdx+500+45, 20+32+13))
 
 		startIdx += 1200
 	}
@@ -260,7 +217,7 @@ func BigLadder(iterations int) []GameObject {
 // handleCollision returns 1 if a coin was collected, 0 otherwise
 func (l *Level) handleCollision(pSquare *MovingSquare, dt float64, overlap Square, objSquare Square, objType GameObjectType, objIdx int) int {
 	if objType == Flag {
-		pSquare.direction = pSquare.direction * -1.0
+		pSquare.Direction = pSquare.Direction * -1.0
 
 		playerCenter := pSquare.center_x()
 		flagCenter := objSquare.center_x()
@@ -344,7 +301,7 @@ func (l *Level) findClosestElements(pSquare *MovingSquare) map[int]struct{} {
 	return elements
 }
 
-func (l *Level) resolveCollisions(pSquare *MovingSquare, dt float64) int {
+func (l *Level) ResolveCollisions(pSquare *MovingSquare, dt float64) int {
 	elements := l.findClosestElements(pSquare)
 
 	pSquare.nextPos(dt)
@@ -353,26 +310,27 @@ func (l *Level) resolveCollisions(pSquare *MovingSquare, dt float64) int {
 	for pc.next(l, *pSquare.Square, false) {
 		overlap, objSquare := l.overlap(*pSquare.Square, pc.idx)
 
-		pc.coins += l.handleCollision(pSquare, dt, overlap, objSquare, pc.t, pc.idx)
+		pc.coins += l.handleCollision(pSquare, dt, overlap, objSquare, pc.t, pc.idx) // TODO: This should be passed in as a func so each game can handle collisions differently
 
 		delete(*pc.elements, pc.idx)
 	}
 
+	// TODO: Below should be outside this function, handled in the PlayerUpdate func in TdcGame
 	// Collide with ground
 	if pSquare.p.y <= 0 {
 		pSquare.p.y = 0
-		pSquare.vy = 0
-		pSquare.onground = true
+		pSquare.Vy = 0
+		pSquare.Onground = true
 	}
 
-	if !pSquare.onground {
-		pSquare.vy -= Gravity * dt // Always apply gravity to avoid shenanigans
+	if !pSquare.Onground {
+		pSquare.Vy -= Gravity * dt // Always apply gravity to avoid shenanigans
 	}
 
 	// Turn around at start flag
 	if pSquare.p.x < 0 {
 		pSquare.p.x = 0
-		pSquare.direction = pSquare.direction * -1.0
+		pSquare.Direction = pSquare.Direction * -1.0
 	}
 
 	return pc.coins

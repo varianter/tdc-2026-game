@@ -1,4 +1,4 @@
-package main
+package tdcgame
 
 import (
 	"testing"
@@ -20,7 +20,7 @@ func runCollision(t *testing.T, player *MovingSquare, platform GameObject, dt fl
 	t.Helper()
 	l := NewLevelFromObjects([]GameObject{platform})
 	p := clonePlayer(player)
-	l.resolveCollisions(p, dt)
+	l.ResolveCollisions(p, dt)
 	check(t, p)
 }
 
@@ -31,7 +31,7 @@ func TestCollisionXAxisFromLeft(t *testing.T) {
 	// Player right edge (x+15+34 = x+49) should be slightly past platform left (100).
 	// So x+49 = 101 => x = 52. Player left = 52+15 = 67.
 	dt := 1.0 / 60
-	platform := newPlatform(100, 20)
+	platform := NewPlatform(100, 20)
 
 	runCollision(t, NewTestSquare(52, 20, 1, 0), platform, dt, func(t *testing.T, p *MovingSquare) {
 		// After collision, player right edge should be pushed back to platform left (100).
@@ -40,8 +40,8 @@ func TestCollisionXAxisFromLeft(t *testing.T) {
 		if p.p.x != expectedX {
 			t.Errorf("X from left: got p.x = %f; want %f", p.p.x, expectedX)
 		}
-		if p.vx != 0 {
-			t.Errorf("X from left: vx should be 0 after collision, got %f", p.vx)
+		if p.Vx != 0 {
+			t.Errorf("X from left: vx should be 0 after collision, got %f", p.Vx)
 		}
 	})
 }
@@ -51,7 +51,7 @@ func TestCollisionXAxisFromRight(t *testing.T) {
 	// Platform right=200. Player left edge (x+15) should be slightly past platform right (200).
 	// So x+15 = 199 => x = 184.
 	dt := 1.0 / 60
-	platform := newPlatform(100, 20)
+	platform := NewPlatform(100, 20)
 
 	runCollision(t, NewTestSquare(184, 20, -1, 0), platform, dt, func(t *testing.T, p *MovingSquare) {
 		// After collision, player left edge pushed to platform right (200).
@@ -59,8 +59,8 @@ func TestCollisionXAxisFromRight(t *testing.T) {
 		if p.p.x != expectedX {
 			t.Errorf("X from right: got p.x = %f; want %f", p.p.x, expectedX)
 		}
-		if p.vx != 0 {
-			t.Errorf("X from right: vx should be 0 after collision, got %f", p.vx)
+		if p.Vx != 0 {
+			t.Errorf("X from right: vx should be 0 after collision, got %f", p.Vx)
 		}
 	})
 }
@@ -72,7 +72,7 @@ func TestCollisionYAxisFromAbove(t *testing.T) {
 	// Place player so btm (y) is just below platform top (52): y=50, top=50+49=99.
 	// Player center_y = 50+24.5 = 74.5, platform center_y = 20+16 = 36 => player above platform.
 	dt := 1.0 / 60
-	platform := newPlatform(100, 20)
+	platform := NewPlatform(100, 20)
 
 	runCollision(t, NewTestSquare(118, 50, 1, -50), platform, dt, func(t *testing.T, p *MovingSquare) {
 		// After collision, player btm should be at platform top (52).
@@ -80,10 +80,10 @@ func TestCollisionYAxisFromAbove(t *testing.T) {
 		if p.p.y != expectedY {
 			t.Errorf("Y from above: got p.y = %f; want %f", p.p.y, expectedY)
 		}
-		if p.vy != 0 {
-			t.Errorf("Y from above: vy should be 0 after landing, got %f", p.vy)
+		if p.Vy != 0 {
+			t.Errorf("Y from above: vy should be 0 after landing, got %f", p.Vy)
 		}
-		if !p.onground {
+		if !p.Onground {
 			t.Errorf("Y from above: player should be onground after landing")
 		}
 	})
@@ -96,7 +96,7 @@ func TestCollisionYAxisFromBelow(t *testing.T) {
 	// Place player so top (y+49) is just past platform btm (100): y=52, top=101.
 	// Player center_y = 52+24.5 = 76.5, platform center_y = 100+16 = 116 => player below.
 	dt := 1.0 / 60
-	platform := newPlatform(100, 100)
+	platform := NewPlatform(100, 100)
 
 	runCollision(t, NewTestSquare(118, 52, 1, 50), platform, dt, func(t *testing.T, p *MovingSquare) {
 		// After collision, player top (p.y + p.h) should be pushed to platform btm (100).
@@ -119,7 +119,7 @@ func BenchmarkCollisionGrid(b *testing.B) {
 	dt := 1.0 / 60
 
 	for b.Loop() {
-		l.resolveCollisions(p, dt)
+		l.ResolveCollisions(p, dt)
 	}
 }
 
@@ -127,6 +127,6 @@ func NewTestSquare(x, y, direction, vy float64) *MovingSquare {
 	collisionOffset, w, h, vx := 15.0, 64.0, 64.0, 90.0
 	return &MovingSquare{
 		&Square{p: Position{x: x + collisionOffset, y: y}, w: w - (collisionOffset * 2), h: h - collisionOffset},
-		&Moving{vy: vy, vx: vx, direction: direction, onground: false},
+		&Moving{Vy: vy, Vx: vx, Direction: direction, Onground: false},
 	}
 }

@@ -1,4 +1,4 @@
-package main
+package tdcgame
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
@@ -76,7 +76,7 @@ func (p *Player) switchAnim(anim *Animation) {
 	}
 }
 
-func (p *Player) Update(dt float64, level Level) error {
+func (p *Player) Update(dt float64, level Level, fn PlayerUpdate) error {
 	if ebiten.IsKeyPressed(ebiten.KeyA) {
 		p.autorun = true
 	}
@@ -95,19 +95,13 @@ func (p *Player) Update(dt float64, level Level) error {
 		}
 	}
 
-	if p.onground && (ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsKeyPressed(ebiten.KeyUp)) {
-		p.vy = JumpForce
-	}
-
 	pSquare := p.ToCollisionSquare()
-
-	coins := level.resolveCollisions(&pSquare, dt)
+	coins := fn(ebiten.IsKeyPressed(ebiten.KeySpace), dt, level, &pSquare)
 	p.coins += coins
 
 	nextX := pSquare.p.x - p.collisionOffsetX
 
 	// Update animation
-	// TODO: Handle this in the draw function
 	if nextX > p.x {
 		p.switchAnim(p.walkRightAnim)
 	}
@@ -117,10 +111,10 @@ func (p *Player) Update(dt float64, level Level) error {
 
 	p.x = nextX
 	p.y = pSquare.p.y
-	p.vy = pSquare.vy
-	p.vx = pSquare.vx
-	p.direction = pSquare.direction
-	p.onground = pSquare.onground
+	p.vy = pSquare.Vy
+	p.vx = pSquare.Vx
+	p.direction = pSquare.Direction
+	p.onground = pSquare.Onground
 
 	p.currentAnimation.Update(dt)
 	return nil
@@ -129,7 +123,7 @@ func (p *Player) Update(dt float64, level Level) error {
 func (p *Player) ToCollisionSquare() MovingSquare {
 	pSquare := &MovingSquare{
 		&Square{p: Position{x: p.x + p.collisionOffsetX, y: p.y}, w: p.w - (p.collisionOffsetX * 2), h: p.h - p.collisionOffsetTop},
-		&Moving{vy: p.vy, vx: p.vx, direction: p.direction, onground: false},
+		&Moving{Vy: p.vy, Vx: p.vx, Direction: p.direction, Onground: p.onground},
 	}
 	return *pSquare
 }

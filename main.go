@@ -2,38 +2,23 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-const (
-	WalkSpeed         = 90.0 // px/sec
-	JumpSpeed         = 60
-	Gravity           = 700 // px/sec^2
-	JumpForce         = 300
-	GroundY           = 186
-	AirControl        = 1
-	AnimIdleFPS       = 5.0
-	AnimWalkFPS       = 10.0
-	AnimRunFPS        = 14.0
-	ScreenW           = 426
-	ScreenH           = 240
-	GroundDrawOffset  = 6.0
-	AutoRun           = true
-	GameEnd           = 1200   // TODO: Currently unused
-	CollisionAlgoritm = "grid" // "grid" or "all"
-)
-
 func main() {
-	assets := LoadAssets()
-	sheet := LoadSpriteSheet(assets, 64, 64)
-	player := Newplayer(sheet)
+	args := os.Args[1:]
 
-	game := &Game{
-		player: player,
-		assets: assets,
-		level:  NewLevel(),
+	activeGame := ""
+	if len(args) > 0 {
+		gameToRun := args[0]
+		if len(gameToRun) > 0 {
+			activeGame = gameToRun
+		}
 	}
+
+	game := &Game{activeGame: activeGame}
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetWindowSize(426*4, 240*4)
 	ebiten.SetWindowTitle("GOTY2026")
