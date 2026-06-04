@@ -41,10 +41,10 @@ type GameRunner struct {
 	camera Camera
 	assets *Assets
 	level  *Level
-	game   TdcGame
+	game   TdcGameWithPlayer
 }
 
-func NewGameFramework(embed embed.FS, game TdcGame) *GameRunner {
+func NewGameFrameworkWithPlayer(embed embed.FS, game TdcGameWithPlayer) *GameRunner {
 	assets := LoadAssets(embed)
 	sheet := LoadSpriteSheet(assets, 64, 64)
 	player := Newplayer(sheet)
@@ -88,6 +88,7 @@ func (cam *Camera) Follow(player *Player, screenW, screenH int) {
 
 func (g *GameRunner) Update() error {
 	dt := 1.0 / float64(ebiten.TPS()) // calculate deltatime based on TPS, ~0.0166 at 60 TPS
+	// TODO: Detect type of game and call correct update function
 	err := g.player.Update(dt, *g.level, g.game.GetPlayerUpdateFunc())
 	if err != nil {
 		return err

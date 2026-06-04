@@ -262,25 +262,6 @@ func (l *Level) findClosestElements(pSquare *MovingSquare) map[int]struct{} {
 	return elements
 }
 
-// func (l *Level) ResolveCollisions(pSquare *MovingSquare, dt float64) int {
-// 	elements := l.findClosestElements(pSquare)
-//
-// 	pSquare.nextPos(dt)
-// 	pc := CollisionIterator{idx: -1, elements: &elements}
-// 	// We loop through the objects until we dont collide with anything
-// 	for pc.next(l, *pSquare.Square, false) {
-// 		overlap, objSquare := l.overlap(*pSquare.Square, pc.idx)
-//
-// 		pc.coins += l.handleCollision(pSquare, dt, overlap, objSquare, pc.t, pc.idx) // TODO: This should be passed in as a func so each game can handle collisions differently
-//
-// 		// delete(*pc.elements, pc.idx)
-// 	}
-//
-// 	// TODO: Below should be outside this function, handled in the PlayerUpdate func in TdcGame
-//
-// 	return pc.coins
-// }
-
 type CollisionIterator struct {
 	elements        *map[int]struct{}
 	l               *Level
@@ -319,7 +300,7 @@ func (c *CollisionIterator) Next(pSquare *Square) bool {
 		obj := &c.l.gameObjects[i]
 
 		if obj.s.collides(pSquare) {
-			overlap := c.l.overlap(pSquare, i)
+			overlap := obj.s.get_overlap(pSquare)
 			c.CollisionResult = &CollisionResult{Idx: i, T: obj.t, GameObjSquare: obj.s, Overlap: overlap}
 			return true
 		}
@@ -353,10 +334,4 @@ func (l *Level) ResolveCollisions(pSquare *MovingSquare, dt float64) {
 		}
 		iter.Register_collision()
 	}
-}
-
-func (l *Level) overlap(pSquare *Square, gambObjIdx int) *Square {
-	s := l.gameObjects[gambObjIdx].s
-
-	return s.get_overlap(pSquare)
 }

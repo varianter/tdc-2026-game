@@ -3,9 +3,13 @@ package tdcgame
 
 type TdcGame interface {
 	GetGameObjects() []GameObject
-	GetPlayerUpdateFunc() PlayerUpdate
+	// TODO: getGameParameters() GameParameters returns params for the game, gravity and all that jazz
+}
 
-	// TODO: getGameParameters() GameParameters
+type TdcGameWithPlayer interface {
+	TdcGame
+
+	GetPlayerUpdateFunc() PlayerUpdate
 }
 
 type PlayerUpdate func(buttonpressed bool, dt float64, level Level, player *MovingSquare) int

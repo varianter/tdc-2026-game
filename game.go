@@ -54,7 +54,8 @@ func (g *Game) Update() error {
 	return nil
 }
 
-func createRunningGame(gameName string) tdcgame.TdcGame {
+// TODO: Type shenanigans
+func createRunningGame(gameName string) tdcgame.TdcGameWithPlayer {
 	switch gameName {
 	case "tdcrunner":
 		{
@@ -73,7 +74,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if g.activeGame != "" && g.f == nil {
 		// TODO: Create new game here
 		log.Println("Creating runner game")
-		g.f = tdcgame.NewGameFramework(assets, createRunningGame(g.activeGame))
+		g.f = tdcgame.NewGameFrameworkWithPlayer(assets, createRunningGame(g.activeGame))
 		g.f.Draw(screen)
 		return
 	}
