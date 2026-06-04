@@ -118,9 +118,9 @@ func (g *GameRunner) Draw(screen *ebiten.Image) {
 			continue
 		}
 		if gObj.t == Flag {
-			g.drawFlag(c, float32(gObj.s.p.x), float32(gObj.s.p.y), gObj.Color())
+			g.drawFlag(c, float32(gObj.s.P.X), float32(gObj.s.P.Y), gObj.Color())
 		} else {
-			g.RectXY(c, float32(gObj.s.p.x), float32(gObj.s.p.y), float32(gObj.s.w), float32(gObj.s.h), gObj.Color())
+			g.RectXY(c, float32(gObj.s.P.X), float32(gObj.s.P.Y), float32(gObj.s.W), float32(gObj.s.H), gObj.Color())
 		}
 	}
 	// EndFlag

@@ -36,9 +36,9 @@ func TestCollisionXAxisFromLeft(t *testing.T) {
 	runCollision(t, NewTestSquare(52, 20, 1, 0), platform, dt, func(t *testing.T, p *MovingSquare) {
 		// After collision, player right edge should be pushed back to platform left (100).
 		// player.p.x (left of collision square) should be 100 - 34 = 66
-		expectedX := platform.s.left() - p.w
-		if p.p.x != expectedX {
-			t.Errorf("X from left: got p.x = %f; want %f", p.p.x, expectedX)
+		expectedX := platform.s.Left() - p.W
+		if p.P.X != expectedX {
+			t.Errorf("X from left: got p.x = %f; want %f", p.P.X, expectedX)
 		}
 		if p.Vx != 0 {
 			t.Errorf("X from left: vx should be 0 after collision, got %f", p.Vx)
@@ -55,9 +55,9 @@ func TestCollisionXAxisFromRight(t *testing.T) {
 
 	runCollision(t, NewTestSquare(184, 20, -1, 0), platform, dt, func(t *testing.T, p *MovingSquare) {
 		// After collision, player left edge pushed to platform right (200).
-		expectedX := platform.s.right()
-		if p.p.x != expectedX {
-			t.Errorf("X from right: got p.x = %f; want %f", p.p.x, expectedX)
+		expectedX := platform.s.Right()
+		if p.P.X != expectedX {
+			t.Errorf("X from right: got p.x = %f; want %f", p.P.X, expectedX)
 		}
 		if p.Vx != 0 {
 			t.Errorf("X from right: vx should be 0 after collision, got %f", p.Vx)
@@ -76,9 +76,9 @@ func TestCollisionYAxisFromAbove(t *testing.T) {
 
 	runCollision(t, NewTestSquare(118, 50, 1, -50), platform, dt, func(t *testing.T, p *MovingSquare) {
 		// After collision, player btm should be at platform top (52).
-		expectedY := platform.s.top()
-		if p.p.y != expectedY {
-			t.Errorf("Y from above: got p.y = %f; want %f", p.p.y, expectedY)
+		expectedY := platform.s.Top()
+		if p.P.Y != expectedY {
+			t.Errorf("Y from above: got p.y = %f; want %f", p.P.Y, expectedY)
 		}
 		if p.Vy != 0 {
 			t.Errorf("Y from above: vy should be 0 after landing, got %f", p.Vy)
@@ -101,14 +101,14 @@ func TestCollisionYAxisFromBelow(t *testing.T) {
 	runCollision(t, NewTestSquare(118, 52, 1, 50), platform, dt, func(t *testing.T, p *MovingSquare) {
 		// After collision, player top (p.y + p.h) should be pushed to platform btm (100).
 		// i.e. p.p.y = platform.btm() - p.h
-		expectedY := platform.s.btm() - p.h
-		if p.p.y != expectedY {
-			t.Errorf("Y from below: got p.y = %f; want %f", p.p.y, expectedY)
+		expectedY := platform.s.Btm() - p.H
+		if p.P.Y != expectedY {
+			t.Errorf("Y from below: got p.y = %f; want %f", p.P.Y, expectedY)
 		}
 		// vy is zeroed on collision but gravity is re-applied afterwards (onground=false),
 		// so we just verify the player was pushed below the platform bottom.
-		if p.p.y+p.h > platform.s.btm() {
-			t.Errorf("Y from below: player top %f should not exceed platform btm %f", p.p.y+p.h, platform.s.btm())
+		if p.P.Y+p.H > platform.s.Btm() {
+			t.Errorf("Y from below: player top %f should not exceed platform btm %f", p.P.Y+p.H, platform.s.Btm())
 		}
 	})
 }
@@ -126,7 +126,7 @@ func BenchmarkCollisionGrid(b *testing.B) {
 func NewTestSquare(x, y, direction, vy float64) *MovingSquare {
 	collisionOffset, w, h, vx := 15.0, 64.0, 64.0, 90.0
 	return &MovingSquare{
-		&Square{p: Position{x: x + collisionOffset, y: y}, w: w - (collisionOffset * 2), h: h - collisionOffset},
+		&Square{P: Position{X: x + collisionOffset, Y: y}, W: w - (collisionOffset * 2), H: h - collisionOffset},
 		&Moving{Vy: vy, Vx: vx, Direction: direction, Onground: false},
 	}
 }

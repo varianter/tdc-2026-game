@@ -99,7 +99,7 @@ func (p *Player) Update(dt float64, level Level, fn PlayerUpdate) error {
 	coins := fn(ebiten.IsKeyPressed(ebiten.KeySpace), dt, level, &pSquare)
 	p.coins += coins
 
-	nextX := pSquare.p.x - p.collisionOffsetX
+	nextX := pSquare.P.X - p.collisionOffsetX
 
 	// Update animation
 	if nextX > p.x {
@@ -110,7 +110,7 @@ func (p *Player) Update(dt float64, level Level, fn PlayerUpdate) error {
 	}
 
 	p.x = nextX
-	p.y = pSquare.p.y
+	p.y = pSquare.P.Y
 	p.vy = pSquare.Vy
 	p.vx = pSquare.Vx
 	p.direction = pSquare.Direction
@@ -122,7 +122,7 @@ func (p *Player) Update(dt float64, level Level, fn PlayerUpdate) error {
 
 func (p *Player) ToCollisionSquare() MovingSquare {
 	pSquare := &MovingSquare{
-		&Square{p: Position{x: p.x + p.collisionOffsetX, y: p.y}, w: p.w - (p.collisionOffsetX * 2), h: p.h - p.collisionOffsetTop},
+		&Square{P: Position{X: p.x + p.collisionOffsetX, Y: p.y}, W: p.w - (p.collisionOffsetX * 2), H: p.h - p.collisionOffsetTop},
 		&Moving{Vy: p.vy, Vx: p.vx, Direction: p.direction, Onground: p.onground},
 	}
 	return *pSquare

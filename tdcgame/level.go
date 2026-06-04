@@ -24,9 +24,9 @@ func (ss GameObjectType) String() string {
 }
 
 type Square struct {
-	p Position
-	w float64
-	h float64
+	P Position
+	W float64
+	H float64
 }
 
 type MovingSquare struct {
@@ -40,89 +40,89 @@ type Moving struct {
 }
 
 // Calculate next position based on velocity
-func (ps *MovingSquare) nextPos(dt float64) {
-	x := ps.p.x + (ps.Vx * dt * ps.Direction)
-	y := ps.p.y + (ps.Vy * dt)
-	ps.p = Position{x: x, y: y}
+func (ps *MovingSquare) NextPos(dt float64) {
+	x := ps.P.X + (ps.Vx * dt * ps.Direction)
+	y := ps.P.Y + (ps.Vy * dt)
+	ps.P = Position{X: x, Y: y}
 }
 
-func (ps *MovingSquare) collide_x(s Square) {
-	playerCenter := ps.center_x()
-	blockCenter := s.center_x()
+func (ps *MovingSquare) CollideX(s Square) {
+	playerCenter := ps.CenterX()
+	blockCenter := s.CenterX()
 	if playerCenter < blockCenter { // player is to the left of block
-		ps.p.x = s.left() - ps.w
+		ps.P.X = s.Left() - ps.W
 	} else { // player is to the right of block
-		ps.p.x = s.right()
+		ps.P.X = s.Right()
 	}
 	ps.Vx = 0
 }
 
-func (ps *MovingSquare) collide_y(s Square) {
-	playerCenter := ps.center_y()
-	blockCenter := s.center_y()
+func (ps *MovingSquare) CollideY(s Square) {
+	playerCenter := ps.CenterY()
+	blockCenter := s.CenterY()
 	if playerCenter >= blockCenter { // player is above block
-		ps.p.y = s.top()
+		ps.P.Y = s.Top()
 		ps.Vy = 0
 		ps.Onground = true
 	} else { // player is below block
-		ps.p.y = s.btm() - ps.h
+		ps.P.Y = s.Btm() - ps.H
 		ps.Vy = 0
 	}
 }
 
-func (sq *Square) top() float64 {
-	return sq.p.y + sq.h
+func (sq *Square) Top() float64 {
+	return sq.P.Y + sq.H
 }
 
-func (sq *Square) btm() float64 {
-	return sq.p.y
+func (sq *Square) Btm() float64 {
+	return sq.P.Y
 }
 
-func (sq *Square) left() float64 {
-	return sq.p.x
+func (sq *Square) Left() float64 {
+	return sq.P.X
 }
 
-func (sq *Square) right() float64 {
-	return sq.p.x + sq.w
+func (sq *Square) Right() float64 {
+	return sq.P.X + sq.W
 }
 
-func (sq *Square) center_y() float64 {
-	return sq.p.y + sq.h/2
+func (sq *Square) CenterY() float64 {
+	return sq.P.Y + sq.H/2
 }
 
-func (sq *Square) center_x() float64 {
-	return sq.p.x + sq.w/2
+func (sq *Square) CenterX() float64 {
+	return sq.P.X + sq.W/2
 }
 
-func (sq *Square) collides(psq Square) bool {
-	if psq.p.x < sq.p.x+sq.w && // left side of player is at the left of the right side of obj
-		psq.p.x+psq.w > sq.p.x && // right side of player is at the right of the left side of obj
-		psq.p.y+psq.h > sq.p.y && // top side of player is above the bottom side of ob
-		psq.p.y < sq.p.y+sq.h { // the bottom side of player is underneath the top side of obj
+func (sq *Square) collides(psq *Square) bool {
+	if psq.P.X < sq.P.X+sq.W && // left side of player is at the left of the right side of obj
+		psq.P.X+psq.W > sq.P.X && // right side of player is at the right of the left side of obj
+		psq.P.Y+psq.H > sq.P.Y && // top side of player is above the bottom side of ob
+		psq.P.Y < sq.P.Y+sq.H { // the bottom side of player is underneath the top side of obj
 		return true
 	} else {
 		return false
 	}
 }
 
-func (obj *Square) get_overlap(p Square) Square {
-	yTop := math.Min(obj.p.y+obj.h, p.p.y+p.h)
-	yBottom := math.Max(obj.p.y, p.p.y)
+func (obj *Square) get_overlap(p *Square) *Square {
+	yTop := math.Min(obj.P.Y+obj.H, p.P.Y+p.H)
+	yBottom := math.Max(obj.P.Y, p.P.Y)
 
-	xLeft := math.Max(obj.p.x, p.p.x)
-	xRight := math.Min(obj.p.x+obj.w, p.p.x+p.w)
+	xLeft := math.Max(obj.P.X, p.P.X)
+	xRight := math.Min(obj.P.X+obj.W, p.P.X+p.W)
 
 	w := xRight - xLeft
 	h := yTop - yBottom
 
-	return Square{
-		p: Position{x: xLeft, y: yBottom},
-		w: w, h: h,
+	return &Square{
+		P: Position{X: xLeft, Y: yBottom},
+		W: w, H: h,
 	}
 }
 
 type Position struct {
-	x, y float64
+	X, Y float64
 }
 
 type GameObject struct {
@@ -151,15 +151,15 @@ type Level struct {
 }
 
 func NewPlatform(x, y float64) GameObject {
-	return GameObject{t: Platform, s: Square{p: Position{x: x, y: y}, w: float64(100), h: float64(32)}}
+	return GameObject{t: Platform, s: Square{P: Position{X: x, Y: y}, W: float64(100), H: float64(32)}}
 }
 
 func NewCoin(x, y float64) GameObject {
-	return GameObject{t: Coin, s: Square{p: Position{x: x, y: y}, w: float64(10), h: float64(10)}}
+	return GameObject{t: Coin, s: Square{P: Position{X: x, Y: y}, W: float64(10), H: float64(10)}}
 }
 
 func NewFlag(x, y float64) GameObject {
-	return GameObject{t: Flag, s: Square{p: Position{x: x, y: y}, w: float64(4), h: float64(64 + 20)}}
+	return GameObject{t: Flag, s: Square{P: Position{X: x, Y: y}, W: float64(4), H: float64(64 + 20)}}
 }
 
 func NewLevelFromObjects(objs []GameObject) *Level {
@@ -215,45 +215,6 @@ func BigLadder(iterations int) []GameObject {
 }
 
 // handleCollision returns 1 if a coin was collected, 0 otherwise
-func (l *Level) handleCollision(pSquare *MovingSquare, dt float64, overlap Square, objSquare Square, objType GameObjectType, objIdx int) int {
-	if objType == Flag {
-		pSquare.Direction = pSquare.Direction * -1.0
-
-		playerCenter := pSquare.center_x()
-		flagCenter := objSquare.center_x()
-		if playerCenter < flagCenter { // player is to the left of block
-			pSquare.p.x = objSquare.left() - pSquare.w - 1
-		} else { // player is to the right of block
-			pSquare.p.x = objSquare.right() + 1
-		}
-		l.register_collision(objIdx)
-	}
-	if objType == Coin {
-		l.register_collision(objIdx)
-		return 1
-	}
-	if objType == Platform {
-		if overlap.w > overlap.h { // y is shallowest so solve y collision first
-			pSquare.collide_y(objSquare)
-			pSquare.nextPos(dt) // dont do this,get new pos
-
-			if l.collideObj(*pSquare.Square, objIdx) {
-				pSquare.collide_x(objSquare)
-				pSquare.nextPos(dt)
-			}
-		} else {
-			pSquare.collide_x(objSquare)
-			pSquare.nextPos(dt)
-
-			if l.collideObj(*pSquare.Square, objIdx) {
-				pSquare.collide_y(objSquare)
-
-				pSquare.nextPos(dt)
-			}
-		}
-	}
-	return 0
-}
 
 func buildGrid(gameObjects []GameObject, cell_size float64) map[Position][]int {
 	grid := make(map[Position][]int)
@@ -261,14 +222,14 @@ func buildGrid(gameObjects []GameObject, cell_size float64) map[Position][]int {
 	// Move this to the level constructor probably (then we need to recalc if we have moving game objects)
 	for i := range gameObjects {
 		obj := gameObjects[i]
-		gx1 := math.Floor(obj.s.p.x / cell_size)
-		gy1 := math.Floor(obj.s.p.y / cell_size)
-		gx2 := math.Floor((obj.s.p.x + obj.s.w) / cell_size)
-		gy2 := math.Floor((obj.s.p.y + obj.s.h) / cell_size)
+		gx1 := math.Floor(obj.s.P.X / cell_size)
+		gy1 := math.Floor(obj.s.P.Y / cell_size)
+		gx2 := math.Floor((obj.s.P.X + obj.s.W) / cell_size)
+		gy2 := math.Floor((obj.s.P.Y + obj.s.H) / cell_size)
 
 		for gy := gy1; gy <= gy2; gy++ {
 			for gx := gx1; gx <= gx2; gx++ {
-				pos := Position{x: gx, y: gy}
+				pos := Position{X: gx, Y: gy}
 				arr, ok := grid[pos]
 				if !ok {
 					grid[pos] = []int{i}
@@ -284,13 +245,13 @@ func buildGrid(gameObjects []GameObject, cell_size float64) map[Position][]int {
 
 func (l *Level) findClosestElements(pSquare *MovingSquare) map[int]struct{} {
 	elements := make(map[int]struct{})
-	grid_x1 := math.Floor(pSquare.p.x / l.cell_size)
-	grid_y1 := math.Floor(pSquare.p.y / l.cell_size)
-	grid_x2 := math.Floor((pSquare.p.x + pSquare.w) / l.cell_size)
-	grid_y2 := math.Floor((pSquare.p.y + pSquare.h) / l.cell_size)
+	grid_x1 := math.Floor(pSquare.P.X / l.cell_size)
+	grid_y1 := math.Floor(pSquare.P.Y / l.cell_size)
+	grid_x2 := math.Floor((pSquare.P.X + pSquare.W) / l.cell_size)
+	grid_y2 := math.Floor((pSquare.P.Y + pSquare.H) / l.cell_size)
 	for gy := grid_y1; gy <= grid_y2; gy++ {
 		for gx := grid_x1; gx <= grid_x2; gx++ {
-			pos := Position{x: gx, y: gy}
+			pos := Position{X: gx, Y: gy}
 			for _, otherIdx := range l.grid[pos] {
 				if !l.gameObjects[otherIdx].removed {
 					elements[otherIdx] = struct{}{}
@@ -301,56 +262,65 @@ func (l *Level) findClosestElements(pSquare *MovingSquare) map[int]struct{} {
 	return elements
 }
 
-func (l *Level) ResolveCollisions(pSquare *MovingSquare, dt float64) int {
-	elements := l.findClosestElements(pSquare)
+// func (l *Level) ResolveCollisions(pSquare *MovingSquare, dt float64) int {
+// 	elements := l.findClosestElements(pSquare)
+//
+// 	pSquare.nextPos(dt)
+// 	pc := CollisionIterator{idx: -1, elements: &elements}
+// 	// We loop through the objects until we dont collide with anything
+// 	for pc.next(l, *pSquare.Square, false) {
+// 		overlap, objSquare := l.overlap(*pSquare.Square, pc.idx)
+//
+// 		pc.coins += l.handleCollision(pSquare, dt, overlap, objSquare, pc.t, pc.idx) // TODO: This should be passed in as a func so each game can handle collisions differently
+//
+// 		// delete(*pc.elements, pc.idx)
+// 	}
+//
+// 	// TODO: Below should be outside this function, handled in the PlayerUpdate func in TdcGame
+//
+// 	return pc.coins
+// }
 
-	pSquare.nextPos(dt)
-	pc := ColIterator{idx: -1, elements: &elements}
-	// We loop through the objects until we dont collide with anything
-	for pc.next(l, *pSquare.Square, false) {
-		overlap, objSquare := l.overlap(*pSquare.Square, pc.idx)
-
-		pc.coins += l.handleCollision(pSquare, dt, overlap, objSquare, pc.t, pc.idx) // TODO: This should be passed in as a func so each game can handle collisions differently
-
-		delete(*pc.elements, pc.idx)
-	}
-
-	// TODO: Below should be outside this function, handled in the PlayerUpdate func in TdcGame
-	// Collide with ground
-	if pSquare.p.y <= 0 {
-		pSquare.p.y = 0
-		pSquare.Vy = 0
-		pSquare.Onground = true
-	}
-
-	if !pSquare.Onground {
-		pSquare.Vy -= Gravity * dt // Always apply gravity to avoid shenanigans
-	}
-
-	// Turn around at start flag
-	if pSquare.p.x < 0 {
-		pSquare.p.x = 0
-		pSquare.Direction = pSquare.Direction * -1.0
-	}
-
-	return pc.coins
+type CollisionIterator struct {
+	elements        *map[int]struct{}
+	l               *Level
+	CollisionResult *CollisionResult
 }
 
-type ColIterator struct {
-	idx      int
-	elements *map[int]struct{}
-	coins    int
-	t        GameObjectType
+type CollisionResult struct {
+	Idx           int
+	T             GameObjectType
+	Overlap       *Square
+	GameObjSquare Square
+}
+
+func (l *Level) NewCollisionIterator(pSquare *MovingSquare, dt float64) *CollisionIterator {
+	elements := l.findClosestElements(pSquare)
+
+	pSquare.NextPos(dt)
+
+	ci := &CollisionIterator{elements: &elements, CollisionResult: nil, l: l}
+
+	return ci
+}
+
+func (c *CollisionIterator) Register_collision() {
+	obj := &c.l.gameObjects[c.CollisionResult.Idx]
+	if obj.t == Coin || obj.t == Flag {
+		obj.removed = true
+	}
+
+	delete(*c.elements, c.CollisionResult.Idx)
 }
 
 // Returns the first colliding object
-func (citer *ColIterator) next(l *Level, pSquare Square, coins bool) bool {
-	for i := range *citer.elements { // TODO: Might make more sense to start from idx instead of starting from the top every time
-		obj := &l.gameObjects[i]
+func (c *CollisionIterator) Next(pSquare *Square) bool {
+	for i := range *c.elements { // TODO: Might make more sense to start from idx instead of starting from the top every time
+		obj := &c.l.gameObjects[i]
 
 		if obj.s.collides(pSquare) {
-			citer.idx = i
-			citer.t = obj.t
+			overlap := c.l.overlap(pSquare, i)
+			c.CollisionResult = &CollisionResult{Idx: i, T: obj.t, GameObjSquare: obj.s, Overlap: overlap}
 			return true
 		}
 	}
@@ -358,27 +328,35 @@ func (citer *ColIterator) next(l *Level, pSquare Square, coins bool) bool {
 	return false
 }
 
-func (l *Level) collideObj(pSquare Square, gameObjIdx int) bool {
-	obj := &l.gameObjects[gameObjIdx]
+func (c *CollisionIterator) CheckCollisionObj(pSquare Square, gameObjIdx int) bool {
+	obj := &c.l.gameObjects[gameObjIdx]
 	if obj.removed || obj.t != Platform {
 		return false
 	}
 
-	if obj.s.collides(pSquare) {
+	if obj.s.collides(&pSquare) {
 		return true
 	}
 	return false
 }
 
-func (l *Level) overlap(pSquare Square, gambObjIdx int) (Square, Square) {
-	s := l.gameObjects[gambObjIdx].s
-
-	return s.get_overlap(pSquare), s
+func (l *Level) ResolveCollisions(pSquare *MovingSquare, dt float64) {
+	iter := l.NewCollisionIterator(pSquare, dt)
+	for iter.Next(pSquare.Square) {
+		obj := iter.CollisionResult
+		if obj.T == Platform {
+			if obj.Overlap.W > obj.Overlap.H {
+				pSquare.CollideY(obj.GameObjSquare)
+			} else {
+				pSquare.CollideX(obj.GameObjSquare)
+			}
+		}
+		iter.Register_collision()
+	}
 }
 
-func (l *Level) register_collision(gameObjIdx int) {
-	obj := &l.gameObjects[gameObjIdx]
-	if obj.t == Coin || obj.t == Flag {
-		obj.removed = true
-	}
+func (l *Level) overlap(pSquare *Square, gambObjIdx int) *Square {
+	s := l.gameObjects[gambObjIdx].s
+
+	return s.get_overlap(pSquare)
 }
