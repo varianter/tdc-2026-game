@@ -2,6 +2,7 @@ package main
 
 import (
 	"image/color"
+	"log"
 	"math"
 	"math/rand"
 
@@ -48,6 +49,15 @@ func NewLauncherScene() *LauncherScene {
 }
 
 func (l *LauncherScene) Update(dt float64) (Scene, error) {
+	if ebiten.IsKeyPressed(ebiten.KeyR) {
+		log.Print("jakjaskdj")
+		l.winner = 0
+		entry := wheelGames[l.winner] // HACK: Use enum for indexes? idk
+		if entry.newScene != nil {
+			return entry.newScene(), nil
+		}
+	}
+
 	switch l.state {
 	case launcherIdle:
 		if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
@@ -116,7 +126,7 @@ func (l *LauncherScene) Draw(screen *ebiten.Image) {
 	}
 
 	// Divider lines between slices
-	for i := 0; i < N; i++ {
+	for i := range N {
 		a := l.angle + float64(i)*sliceAngle
 		ex := cx + float32(math.Cos(a))*r
 		ey := cy + float32(math.Sin(a))*r
