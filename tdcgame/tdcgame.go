@@ -5,6 +5,8 @@ type TdcGame interface {
 	GetGameObjects() []GameObject
 
 	GetGameParameters() *GameParameters
+
+	GetGameState() GameState
 }
 
 type TdcGameWithPlayer interface {
@@ -14,6 +16,13 @@ type TdcGameWithPlayer interface {
 }
 
 type PlayerUpdate func(buttonpressed bool, dt float64, level Level, player *MovingSquare) int
+
+type GameState int
+
+const (
+	Running GameObjectType = iota
+	GameOver
+)
 
 type GameParameters struct {
 	WalkSpeed   float64

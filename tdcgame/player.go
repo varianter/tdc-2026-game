@@ -19,7 +19,6 @@ type Player struct {
 	movementScale    float64
 	walkSpeed        float64
 
-	coins              int
 	autorun            bool
 	collisionOffsetX   float64
 	collisionOffsetTop float64
@@ -56,7 +55,6 @@ func Newplayer(sheet *SpriteSheet, params *GameParameters) *Player {
 		h: 64, w: 64,
 		movementScale: 1.0,
 		direction:     1.0,
-		coins:         0,
 		autorun:       true,
 		onground:      true,
 		walkSpeed:     params.WalkSpeed,
@@ -78,7 +76,7 @@ func (p *Player) switchAnim(anim *Animation) {
 	}
 }
 
-func (p *Player) Update(dt float64, level Level, fn PlayerUpdate) error {
+func (p *Player) Update(dt float64, level Level, tdcgamePlayerUpdate PlayerUpdate) (int, error) {
 	if ebiten.IsKeyPressed(ebiten.KeyA) {
 		p.autorun = true
 	}
@@ -98,8 +96,7 @@ func (p *Player) Update(dt float64, level Level, fn PlayerUpdate) error {
 	}
 
 	pSquare := p.ToCollisionSquare()
-	coins := fn(ebiten.IsKeyPressed(ebiten.KeySpace), dt, level, &pSquare)
-	p.coins += coins
+	coins := tdcgamePlayerUpdate(ebiten.IsKeyPressed(ebiten.KeySpace), dt, level, &pSquare)
 
 	nextX := pSquare.P.X - p.collisionOffsetX
 
@@ -119,7 +116,7 @@ func (p *Player) Update(dt float64, level Level, fn PlayerUpdate) error {
 	p.onground = pSquare.Onground
 
 	p.currentAnimation.Update(dt)
-	return nil
+	return coins, nil
 }
 
 func (p *Player) ToCollisionSquare() MovingSquare {

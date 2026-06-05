@@ -3,7 +3,16 @@ package tdcrunner
 
 import "variant.dev/tdcgame/tdcgame"
 
-type TdcRunner struct{}
+type TdcRunner struct {
+	gameState tdcgame.GameState
+}
+
+func (r *TdcRunner) GetCurrentScore() {
+}
+
+func (r *TdcRunner) GetGameState() tdcgame.GameState {
+	return r.gameState // TODO: gamestate can be running, dead, or game over
+}
 
 func (r *TdcRunner) GetGameObjects() []tdcgame.GameObject {
 	objs := []tdcgame.GameObject{

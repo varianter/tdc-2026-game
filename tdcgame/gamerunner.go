@@ -1,11 +1,16 @@
 package tdcgame
 
 import (
+	"bytes"
 	"embed"
+	"fmt"
 	"image/color"
+	"log"
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
@@ -21,12 +26,13 @@ const (
 
 // GameRunner interface with helpers to make it easier to make a game
 type GameRunner struct {
-	player *Player
-	camera Camera
-	assets *Assets
-	level  *Level
-	game   TdcGame
-	params *GameParameters
+	player       *Player
+	camera       Camera
+	assets       *Assets
+	level        *Level
+	game         TdcGame
+	params       *GameParameters
+	currentScore int
 }
 
 func NewGameFrameworkWithPlayer(embed embed.FS, game TdcGameWithPlayer) *GameRunner {
@@ -77,10 +83,12 @@ func (g *GameRunner) Update() error {
 	// TODO: Detect type of game and call correct update function
 
 	if gp, ok := g.game.(TdcGameWithPlayer); ok {
-		err := g.player.Update(dt, *g.level, gp.GetPlayerUpdateFunc())
+		coins, err := g.player.Update(dt, *g.level, gp.GetPlayerUpdateFunc())
 		if err != nil {
 			return err
 		}
+
+		g.currentScore += coins
 		g.camera.Follow(g.player, ScreenH, ScreenW)
 	}
 
@@ -118,6 +126,8 @@ func (g *GameRunner) Draw(screen *ebiten.Image) {
 		g.RectXY(c, float32(GameEnd+4), float32(0), float32(3), float32(64), color.RGBA{30, 31, 30, 255})
 		g.RectXY(c, float32(GameEnd+4), float32(64), float32(30), float32(20), color.RGBA{255, 56, 147, 255})
 	}
+
+	Write(screen, fmt.Sprintf("Score %d", g.currentScore), 0, 0, 16)
 }
 
 // Startflag
@@ -139,3 +149,23 @@ func (g *GameRunner) RectXY(c *Canvas, x, y, w, h float32, clr color.Color) {
 func zeroY(y, h float32) float32 {
 	return GroundY - h - y
 }
+
+func Write(s *ebiten.Image, msg string, x, y int, size int) {
+	op := &text.DrawOptions{}
+	op.GeoM.Translate(float64(x), float64(y))
+	op.ColorScale.ScaleWithColor(color.White)
+	text.Draw(s, msg, &text.GoTextFace{
+		Source: mplusFaceSource,
+		Size:   float64(size),
+	}, op)
+}
+
+func init() {
+	s, err := text.NewGoTextFaceSource(bytes.NewReader(fonts.MPlus1pRegular_ttf))
+	if err != nil {
+		log.Fatal(err)
+	}
+	mplusFaceSource = s
+}
+
+var mplusFaceSource *text.GoTextFaceSource

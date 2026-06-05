@@ -1,16 +1,12 @@
 package main
 
 import (
-	"bytes"
 	"embed"
 	"fmt"
 	"image/color"
-	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"variant.dev/tdcgame/games/tdcrunner"
 	"variant.dev/tdcgame/tdcgame"
@@ -98,23 +94,3 @@ func init() {
 		},
 	})
 }
-
-func Write(s *ebiten.Image, msg string, x, y int, size int) {
-	op := &text.DrawOptions{}
-	op.GeoM.Translate(float64(x), float64(y))
-	op.ColorScale.ScaleWithColor(color.White)
-	text.Draw(s, msg, &text.GoTextFace{
-		Source: mplusFaceSource,
-		Size:   float64(size),
-	}, op)
-}
-
-func init() {
-	s, err := text.NewGoTextFaceSource(bytes.NewReader(fonts.MPlus1pRegular_ttf))
-	if err != nil {
-		log.Fatal(err)
-	}
-	mplusFaceSource = s
-}
-
-var mplusFaceSource *text.GoTextFaceSource
