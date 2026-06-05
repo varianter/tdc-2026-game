@@ -24,6 +24,7 @@ type gameEntry struct {
 	name     string
 	color    color.RGBA
 	newScene func() Scene
+	key      ebiten.Key
 }
 
 var wheelGames []gameEntry
@@ -48,6 +49,15 @@ func NewLauncherScene() *LauncherScene {
 }
 
 func (l *LauncherScene) Update(dt float64) (Scene, error) {
+	pressedKeys := inpututil.AppendPressedKeys(make([]ebiten.Key, ebiten.KeyMax))
+	for _, k := range pressedKeys {
+		for _, g := range wheelGames {
+			if g.key == k {
+				return g.newScene(), nil
+			}
+		}
+	}
+
 	switch l.state {
 	case launcherIdle:
 		if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
@@ -116,7 +126,7 @@ func (l *LauncherScene) Draw(screen *ebiten.Image) {
 	}
 
 	// Divider lines between slices
-	for i := 0; i < N; i++ {
+	for i := range N {
 		a := l.angle + float64(i)*sliceAngle
 		ex := cx + float32(math.Cos(a))*r
 		ey := cy + float32(math.Sin(a))*r

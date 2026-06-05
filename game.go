@@ -1,16 +1,13 @@
 package main
 
 import (
-	"bytes"
 	"embed"
 	"fmt"
 	"image/color"
 	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"variant.dev/tdcgame/games/bounce"
 	"variant.dev/tdcgame/games/tdcrunner"
@@ -74,6 +71,9 @@ func (s *GameRunnerScene) Update(dt float64) (Scene, error) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyQ) {
 		return NewLauncherScene(), nil
 	}
+	if s.runner.State() == tdcgame.GameOver && inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		return NewLauncherScene(), nil
+	}
 	return nil, s.runner.Update()
 }
 
@@ -81,19 +81,28 @@ func (s *GameRunnerScene) Draw(screen *ebiten.Image) {
 	s.runner.Draw(screen)
 }
 
+var scoreKeeper *tdcgame.ScoreKeeper
+
 func createGameFramework(gameName string) *tdcgame.GameRunner {
 	switch gameName {
 	case "tdcrunner":
-		return tdcgame.NewGameFrameworkWithPlayer(assets, &tdcrunner.TdcRunner{})
+		return tdcgame.NewGameFrameworkWithPlayer(assets, &tdcrunner.TdcRunner{}, scoreKeeper, gameName)
 	default:
 		panic(fmt.Sprintf("Unknown game: %s", gameName))
 	}
 }
 
 func init() {
+	var err error
+	scoreKeeper, err = tdcgame.NewScoreKeeper("scores.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	wheelGames = append(wheelGames, gameEntry{
 		name:  "TDCRUNNER",
 		color: color.RGBA{220, 60, 60, 255},
+		key:   ebiten.KeyR,
 		newScene: func() Scene {
 			return &GameRunnerScene{runner: createGameFramework("tdcrunner")}
 		},
@@ -126,23 +135,3 @@ func (s *BounceScene) Update(dt float64) (Scene, error) {
 func (s *BounceScene) Draw(screen *ebiten.Image) {
 	s.game.Draw(screen)
 }
-
-func Write(s *ebiten.Image, msg string, x, y int, size int) {
-	op := &text.DrawOptions{}
-	op.GeoM.Translate(float64(x), float64(y))
-	op.ColorScale.ScaleWithColor(color.White)
-	text.Draw(s, msg, &text.GoTextFace{
-		Source: mplusFaceSource,
-		Size:   float64(size),
-	}, op)
-}
-
-func init() {
-	s, err := text.NewGoTextFaceSource(bytes.NewReader(fonts.MPlus1pRegular_ttf))
-	if err != nil {
-		log.Fatal(err)
-	}
-	mplusFaceSource = s
-}
-
-var mplusFaceSource *text.GoTextFaceSource

@@ -1,11 +1,16 @@
 package tdcgame
 
 import (
+	"bytes"
 	"embed"
+	"fmt"
 	"image/color"
+	"log"
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
@@ -21,22 +26,35 @@ const (
 
 // GameRunner interface with helpers to make it easier to make a game
 type GameRunner struct {
-	player *Player
-	camera Camera
-	assets *Assets
-	level  *Level
-	game   TdcGame
-	params *GameParameters
+	player            *Player
+	camera            Camera
+	assets            *Assets
+	level             *Level
+	game              TdcGame
+	params            *GameParameters
+	currentScore      int
+	previousGameState GameState
+	scoreKeeper       *ScoreKeeper
+	gameName          string
 }
 
-func NewGameFrameworkWithPlayer(embed embed.FS, game TdcGameWithPlayer) *GameRunner {
+func NewGameFrameworkWithPlayer(embed embed.FS, game TdcGameWithPlayer, scoreKeeper *ScoreKeeper, gameName string) *GameRunner {
 	params := game.GetGameParameters()
 	assets := LoadAssets(embed)
 	sheet := LoadSpriteSheet(assets, 64, 64)
 	player := Newplayer(sheet, params)
 	objs := game.GetGameObjects()
 
-	return &GameRunner{player: player, assets: assets, level: NewLevelFromObjects(objs), game: game, params: params}
+	return &GameRunner{
+		player:            player,
+		assets:            assets,
+		level:             NewLevelFromObjects(objs),
+		game:              game,
+		params:            params,
+		previousGameState: game.GetGameState(),
+		scoreKeeper:       scoreKeeper,
+		gameName:          gameName,
+	}
 }
 
 type Canvas struct {
@@ -72,16 +90,36 @@ func (cam *Camera) Follow(player *Player, screenW, screenH int) {
 	cam.y = -player.y
 }
 
+func (g *GameRunner) State() GameState {
+	return g.game.GetGameState()
+}
+
 func (g *GameRunner) Update() error {
 	dt := 1.0 / float64(ebiten.TPS()) // calculate deltatime based on TPS, ~0.0166 at 60 TPS
 	// TODO: Detect type of game and call correct update function
 
-	if gp, ok := g.game.(TdcGameWithPlayer); ok {
-		err := g.player.Update(dt, *g.level, gp.GetPlayerUpdateFunc())
-		if err != nil {
-			return err
+	if g.previousGameState != GameOver {
+		if gp, ok := g.game.(TdcGameWithPlayer); ok {
+			err := g.player.Update(dt, *g.level, gp.GetPlayerUpdateFunc())
+			if err != nil {
+				return err
+			}
+
+			g.currentScore = g.game.GetCurrentScore()
+			if g.params.ShouldCameraFollowPlayer {
+				g.camera.Follow(g.player, ScreenH, ScreenW)
+			}
 		}
-		g.camera.Follow(g.player, ScreenH, ScreenW)
+	}
+
+	state := g.game.GetGameState()
+	if state != g.previousGameState {
+		if state == GameOver && g.scoreKeeper != nil {
+			if err := g.scoreKeeper.AddScore(g.gameName, g.currentScore); err != nil {
+				log.Printf("failed to save score: %v", err)
+			}
+		}
+		g.previousGameState = state
 	}
 
 	return nil
@@ -118,6 +156,25 @@ func (g *GameRunner) Draw(screen *ebiten.Image) {
 		g.RectXY(c, float32(GameEnd+4), float32(0), float32(3), float32(64), color.RGBA{30, 31, 30, 255})
 		g.RectXY(c, float32(GameEnd+4), float32(64), float32(30), float32(20), color.RGBA{255, 56, 147, 255})
 	}
+
+	if g.game.GetGameState() == GameOver {
+		const pad = 12
+		line1Y := ScreenH/2 - 28
+		line2Y := ScreenH/2 - 4
+		line3Y := ScreenH/2 + 20
+		line3H := 12 // font size of line 3
+
+		bgX := float32(ScreenW/2) - 140
+		bgY := float32(line1Y - pad)
+		bgW := float32(280)
+		bgH := float32(line3Y+line3H+pad) - bgY
+
+		vector.FillRect(screen, bgX, bgY, bgW, bgH, color.RGBA{40, 40, 40, 200}, false)
+
+		WriteCentered(screen, "GAME OVER", line1Y, 16)
+		WriteCentered(screen, fmt.Sprintf("Score: %d", g.currentScore), line2Y, 16)
+		WriteCentered(screen, "Press button to return to the game wheel", line3Y, line3H)
+	}
 }
 
 // Startflag
@@ -139,3 +196,31 @@ func (g *GameRunner) RectXY(c *Canvas, x, y, w, h float32, clr color.Color) {
 func zeroY(y, h float32) float32 {
 	return GroundY - h - y
 }
+
+func Write(s *ebiten.Image, msg string, x, y int, size int) {
+	op := &text.DrawOptions{}
+	op.GeoM.Translate(float64(x), float64(y))
+	op.ColorScale.ScaleWithColor(color.White)
+	text.Draw(s, msg, &text.GoTextFace{
+		Source: mplusFaceSource,
+		Size:   float64(size),
+	}, op)
+}
+
+func WriteCentered(s *ebiten.Image, msg string, y int, size int) {
+	op := &text.DrawOptions{}
+	op.GeoM.Translate(float64(ScreenW/2), float64(y))
+	op.PrimaryAlign = text.AlignCenter
+	op.ColorScale.ScaleWithColor(color.White)
+	text.Draw(s, msg, &text.GoTextFace{Source: mplusFaceSource, Size: float64(size)}, op)
+}
+
+func init() {
+	s, err := text.NewGoTextFaceSource(bytes.NewReader(fonts.MPlus1pRegular_ttf))
+	if err != nil {
+		log.Fatal(err)
+	}
+	mplusFaceSource = s
+}
+
+var mplusFaceSource *text.GoTextFaceSource

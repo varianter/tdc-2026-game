@@ -3,7 +3,19 @@ package tdcrunner
 
 import "variant.dev/tdcgame/tdcgame"
 
-type TdcRunner struct{}
+type TdcRunner struct {
+	gameState tdcgame.GameState
+	runtime   float64
+	currentScore int
+}
+
+func (r *TdcRunner) GetCurrentScore() int {
+	return r.currentScore
+}
+
+func (r *TdcRunner) GetGameState() tdcgame.GameState {
+	return r.gameState // TODO: gamestate can be running, dead, or game over
+}
 
 func (r *TdcRunner) GetGameObjects() []tdcgame.GameObject {
 	objs := []tdcgame.GameObject{
@@ -40,19 +52,25 @@ func (r *TdcRunner) GetGameObjects() []tdcgame.GameObject {
 
 func (r *TdcRunner) GetGameParameters() *tdcgame.GameParameters {
 	return &tdcgame.GameParameters{
-		WalkSpeed:   90.0,
-		JumpSpeed:   60,
-		Gravity:     700,
-		JumpForce:   300,
-		AirControl:  1,
-		AnimIdleFPS: 5.0,
-		AnimWalkFPS: 10.0,
-		AnimRunFPS:  14.0,
+		WalkSpeed:                90.0,
+		JumpSpeed:                60,
+		Gravity:                  700,
+		JumpForce:                300,
+		AirControl:               1,
+		AnimIdleFPS:              5.0,
+		AnimWalkFPS:              10.0,
+		AnimRunFPS:               14.0,
+		ShouldCameraFollowPlayer: true,
 	}
 }
 
 func (r *TdcRunner) GetPlayerUpdateFunc() tdcgame.PlayerUpdate {
-	return func(buttonpressed bool, dt float64, level tdcgame.Level, p *tdcgame.MovingSquare) int {
+	return func(buttonpressed bool, dt float64, level tdcgame.Level, p *tdcgame.MovingSquare) {
+		r.runtime += dt
+		if r.runtime >= 120 {
+			r.gameState = tdcgame.GameOver
+		}
+		
 		if p.Onground && buttonpressed {
 			p.Vy = 300
 		}
@@ -84,7 +102,8 @@ func (r *TdcRunner) GetPlayerUpdateFunc() tdcgame.PlayerUpdate {
 			p.P.X = 0
 			p.Direction = p.Direction * -1.0
 		}
-		return coins
+		
+		r.currentScore += coins
 	}
 }
 

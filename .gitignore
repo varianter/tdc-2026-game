@@ -33,3 +33,4 @@ go.work.sum
 
 .DS_store
 /tmp
+scores.db
