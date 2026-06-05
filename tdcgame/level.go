@@ -39,7 +39,7 @@ type Moving struct {
 	Onground          bool
 }
 
-// Calculate next position based on velocity
+// NextPos Calculate next position based on velocity
 func (ps *MovingSquare) NextPos(dt float64) {
 	x := ps.P.X + (ps.Vx * dt * ps.Direction)
 	y := ps.P.Y + (ps.Vy * dt)
@@ -105,12 +105,12 @@ func (sq *Square) collides(psq *Square) bool {
 	}
 }
 
-func (obj *Square) get_overlap(p *Square) *Square {
-	yTop := math.Min(obj.P.Y+obj.H, p.P.Y+p.H)
-	yBottom := math.Max(obj.P.Y, p.P.Y)
+func (sq *Square) getOverlap(p *Square) *Square {
+	yTop := math.Min(sq.P.Y+sq.H, p.P.Y+p.H)
+	yBottom := math.Max(sq.P.Y, p.P.Y)
 
-	xLeft := math.Max(obj.P.X, p.P.X)
-	xRight := math.Min(obj.P.X+obj.W, p.P.X+p.W)
+	xLeft := math.Max(sq.P.X, p.P.X)
+	xRight := math.Min(sq.P.X+sq.W, p.P.X+p.W)
 
 	w := xRight - xLeft
 	h := yTop - yBottom
@@ -147,7 +147,7 @@ func (g *GameObject) Color() color.RGBA {
 type Level struct {
 	gameObjects []GameObject
 	grid        map[Position][]int
-	cell_size   float64
+	cellSize    float64
 }
 
 func NewPlatform(x, y float64) GameObject {
@@ -163,7 +163,7 @@ func NewFlag(x, y float64) GameObject {
 }
 
 func NewLevelFromObjects(objs []GameObject) *Level {
-	return &Level{gameObjects: objs, cell_size: 128, grid: buildGrid(objs, 128)}
+	return &Level{gameObjects: objs, cellSize: 128, grid: buildGrid(objs, 128)}
 }
 
 func NewLevelBig(iterations int) *Level {
@@ -216,16 +216,16 @@ func BigLadder(iterations int) []GameObject {
 
 // handleCollision returns 1 if a coin was collected, 0 otherwise
 
-func buildGrid(gameObjects []GameObject, cell_size float64) map[Position][]int {
+func buildGrid(gameObjects []GameObject, cellSize float64) map[Position][]int {
 	grid := make(map[Position][]int)
 	// Insert items into a grid system of size based on cell_size
 	// Move this to the level constructor probably (then we need to recalc if we have moving game objects)
 	for i := range gameObjects {
 		obj := gameObjects[i]
-		gx1 := math.Floor(obj.s.P.X / cell_size)
-		gy1 := math.Floor(obj.s.P.Y / cell_size)
-		gx2 := math.Floor((obj.s.P.X + obj.s.W) / cell_size)
-		gy2 := math.Floor((obj.s.P.Y + obj.s.H) / cell_size)
+		gx1 := math.Floor(obj.s.P.X / cellSize)
+		gy1 := math.Floor(obj.s.P.Y / cellSize)
+		gx2 := math.Floor((obj.s.P.X + obj.s.W) / cellSize)
+		gy2 := math.Floor((obj.s.P.Y + obj.s.H) / cellSize)
 
 		for gy := gy1; gy <= gy2; gy++ {
 			for gx := gx1; gx <= gx2; gx++ {
@@ -245,12 +245,12 @@ func buildGrid(gameObjects []GameObject, cell_size float64) map[Position][]int {
 
 func (l *Level) findClosestElements(pSquare *MovingSquare) map[int]struct{} {
 	elements := make(map[int]struct{})
-	grid_x1 := math.Floor(pSquare.P.X / l.cell_size)
-	grid_y1 := math.Floor(pSquare.P.Y / l.cell_size)
-	grid_x2 := math.Floor((pSquare.P.X + pSquare.W) / l.cell_size)
-	grid_y2 := math.Floor((pSquare.P.Y + pSquare.H) / l.cell_size)
-	for gy := grid_y1; gy <= grid_y2; gy++ {
-		for gx := grid_x1; gx <= grid_x2; gx++ {
+	gridX1 := math.Floor(pSquare.P.X / l.cellSize)
+	gridY1 := math.Floor(pSquare.P.Y / l.cellSize)
+	gridX2 := math.Floor((pSquare.P.X + pSquare.W) / l.cellSize)
+	gridY2 := math.Floor((pSquare.P.Y + pSquare.H) / l.cellSize)
+	for gy := gridY1; gy <= gridY2; gy++ {
+		for gx := gridX1; gx <= gridX2; gx++ {
 			pos := Position{X: gx, Y: gy}
 			for _, otherIdx := range l.grid[pos] {
 				if !l.gameObjects[otherIdx].removed {
@@ -285,7 +285,7 @@ func (l *Level) NewCollisionIterator(pSquare *MovingSquare, dt float64) *Collisi
 	return ci
 }
 
-func (c *CollisionIterator) Register_collision() {
+func (c *CollisionIterator) RegisterCollision() {
 	obj := &c.l.gameObjects[c.CollisionResult.Idx]
 	if obj.t == Coin || obj.t == Flag {
 		obj.removed = true
@@ -294,13 +294,13 @@ func (c *CollisionIterator) Register_collision() {
 	delete(*c.elements, c.CollisionResult.Idx)
 }
 
-// Returns the first colliding object
+// Next Returns the first colliding object
 func (c *CollisionIterator) Next(pSquare *Square) bool {
 	for i := range *c.elements { // TODO: Might make more sense to start from idx instead of starting from the top every time
 		obj := &c.l.gameObjects[i]
 
 		if obj.s.collides(pSquare) {
-			overlap := obj.s.get_overlap(pSquare)
+			overlap := obj.s.getOverlap(pSquare)
 			c.CollisionResult = &CollisionResult{Idx: i, T: obj.t, GameObjSquare: obj.s, Overlap: overlap}
 			return true
 		}
@@ -332,6 +332,6 @@ func (l *Level) ResolveCollisions(pSquare *MovingSquare, dt float64) {
 				pSquare.CollideX(obj.GameObjSquare)
 			}
 		}
-		iter.Register_collision()
+		iter.RegisterCollision()
 	}
 }

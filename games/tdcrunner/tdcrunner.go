@@ -51,7 +51,7 @@ func (r *TdcRunner) GetPlayerUpdateFunc() tdcgame.PlayerUpdate {
 		coins := 0
 		for iter.Next(p.Square) {
 			coins += handleCollision(p, dt, iter)
-			iter.Register_collision()
+			iter.RegisterCollision()
 		}
 
 		// Collide with ground

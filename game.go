@@ -48,18 +48,32 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func (g *Game) Update() error {
+	// We need to start a new game
+	if g.activeGame != "" && g.f == nil {
+		log.Println("Creating runner game")
+		g.f = createGameFramework(g.activeGame)
+		return nil
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyQ) {
+		g.f = nil
+		g.activeGame = ""
+		return nil
+	}
+
 	if g.f != nil {
 		return g.f.Update()
 	}
+
 	return nil
 }
 
-// TODO: Type shenanigans
-func createRunningGame(gameName string) tdcgame.TdcGameWithPlayer {
+func createGameFramework(gameName string) *tdcgame.GameRunner {
 	switch gameName {
 	case "tdcrunner":
 		{
-			return &tdcrunner.TdcRunner{}
+			tdcRunner := &tdcrunner.TdcRunner{}
+			return tdcgame.NewGameFrameworkWithPlayer(assets, tdcRunner)
 		}
 	default:
 		panic(fmt.Sprintf("Unknown game: %s", gameName))
@@ -67,14 +81,8 @@ func createRunningGame(gameName string) tdcgame.TdcGameWithPlayer {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	// We are currently running a game, draw it
 	if g.f != nil {
-		g.f.Draw(screen)
-		return
-	}
-	if g.activeGame != "" && g.f == nil {
-		// TODO: Create new game here
-		log.Println("Creating runner game")
-		g.f = tdcgame.NewGameFrameworkWithPlayer(assets, createRunningGame(g.activeGame))
 		g.f.Draw(screen)
 		return
 	}

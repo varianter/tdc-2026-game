@@ -41,7 +41,7 @@ type GameRunner struct {
 	camera Camera
 	assets *Assets
 	level  *Level
-	game   TdcGameWithPlayer
+	game   TdcGame
 }
 
 func NewGameFrameworkWithPlayer(embed embed.FS, game TdcGameWithPlayer) *GameRunner {
@@ -89,11 +89,14 @@ func (cam *Camera) Follow(player *Player, screenW, screenH int) {
 func (g *GameRunner) Update() error {
 	dt := 1.0 / float64(ebiten.TPS()) // calculate deltatime based on TPS, ~0.0166 at 60 TPS
 	// TODO: Detect type of game and call correct update function
-	err := g.player.Update(dt, *g.level, g.game.GetPlayerUpdateFunc())
-	if err != nil {
-		return err
+
+	if gp, ok := g.game.(TdcGameWithPlayer); ok {
+		err := g.player.Update(dt, *g.level, gp.GetPlayerUpdateFunc())
+		if err != nil {
+			return err
+		}
+		g.camera.Follow(g.player, ScreenH, ScreenW)
 	}
-	g.camera.Follow(g.player, ScreenH, ScreenW)
 
 	return nil
 }
@@ -108,27 +111,27 @@ func (g *GameRunner) Draw(screen *ebiten.Image) {
 
 	c.Rect(0, 0, float32(w), float32(h), color.RGBA{135, 206, 235, 255}) // sky is light blue, should be replaced with some background
 
-	c.TilingGround(g.assets.Sprites["ground"], g.camera.x, g.camera.y, 5000)
+	if _, ok := g.game.(TdcGameWithPlayer); ok {
+		c.TilingGround(g.assets.Sprites["ground"], g.camera.x, g.camera.y, 5000)
 
-	g.DrawImage(c, g.player.currentAnimation.CurrentFrame(), g.player.x, g.player.y)
+		g.DrawImage(c, g.player.currentAnimation.CurrentFrame(), g.player.x, g.player.y)
 
-	g.RectXY(c, float32(-20), float32(0), float32(20), float32(40), color.RGBA{105, 76, 0, 255})
+		g.RectXY(c, float32(-20), float32(0), float32(20), float32(40), color.RGBA{105, 76, 0, 255})
 
-	for _, gObj := range g.level.gameObjects {
-		if gObj.removed {
-			continue
+		for _, gObj := range g.level.gameObjects {
+			if gObj.removed {
+				continue
+			}
+			if gObj.t == Flag {
+				g.drawFlag(c, float32(gObj.s.P.X), float32(gObj.s.P.Y), gObj.Color())
+			} else {
+				g.RectXY(c, float32(gObj.s.P.X), float32(gObj.s.P.Y), float32(gObj.s.W), float32(gObj.s.H), gObj.Color())
+			}
 		}
-		if gObj.t == Flag {
-			g.drawFlag(c, float32(gObj.s.P.X), float32(gObj.s.P.Y), gObj.Color())
-		} else {
-			g.RectXY(c, float32(gObj.s.P.X), float32(gObj.s.P.Y), float32(gObj.s.W), float32(gObj.s.H), gObj.Color())
-		}
+		// EndFlag
+		g.RectXY(c, float32(GameEnd+4), float32(0), float32(3), float32(64), color.RGBA{30, 31, 30, 255})
+		g.RectXY(c, float32(GameEnd+4), float32(64), float32(30), float32(20), color.RGBA{255, 56, 147, 255})
 	}
-	// EndFlag
-	g.RectXY(c, float32(GameEnd+4), float32(0), float32(3), float32(64), color.RGBA{30, 31, 30, 255})
-	g.RectXY(c, float32(GameEnd+4), float32(64), float32(30), float32(20), color.RGBA{255, 56, 147, 255})
-
-	// TODO: End game when touching end flag?
 }
 
 // Startflag
