@@ -126,6 +126,33 @@ func (g *GameRunner) Update() error {
 }
 
 func (g *GameRunner) Draw(screen *ebiten.Image) {
+	if cd, ok := g.game.(GameWithCustomDraw); ok {
+		cd.CustomDraw(screen)
+	} else {
+		g.defaultDraw(screen)
+	}
+
+	if g.game.GetGameState() == GameOver {
+		const pad = 12
+		line1Y := ScreenH/2 - 28
+		line2Y := ScreenH/2 - 4
+		line3Y := ScreenH/2 + 20
+		line3H := 12 // font size of line 3
+
+		bgX := float32(ScreenW/2) - 140
+		bgY := float32(line1Y - pad)
+		bgW := float32(280)
+		bgH := float32(line3Y+line3H+pad) - bgY
+
+		vector.FillRect(screen, bgX, bgY, bgW, bgH, color.RGBA{40, 40, 40, 200}, false)
+
+		WriteCentered(screen, "GAME OVER", line1Y, 16)
+		WriteCentered(screen, fmt.Sprintf("Score: %d", g.currentScore), line2Y, 16)
+		WriteCentered(screen, "Press button to return to the game wheel", line3Y, line3H)
+	}
+}
+
+func (g *GameRunner) defaultDraw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{30, 30, 30, 255})
 
 	c := &Canvas{
@@ -155,25 +182,6 @@ func (g *GameRunner) Draw(screen *ebiten.Image) {
 		// EndFlag
 		g.RectXY(c, float32(GameEnd+4), float32(0), float32(3), float32(64), color.RGBA{30, 31, 30, 255})
 		g.RectXY(c, float32(GameEnd+4), float32(64), float32(30), float32(20), color.RGBA{255, 56, 147, 255})
-	}
-
-	if g.game.GetGameState() == GameOver {
-		const pad = 12
-		line1Y := ScreenH/2 - 28
-		line2Y := ScreenH/2 - 4
-		line3Y := ScreenH/2 + 20
-		line3H := 12 // font size of line 3
-
-		bgX := float32(ScreenW/2) - 140
-		bgY := float32(line1Y - pad)
-		bgW := float32(280)
-		bgH := float32(line3Y+line3H+pad) - bgY
-
-		vector.FillRect(screen, bgX, bgY, bgW, bgH, color.RGBA{40, 40, 40, 200}, false)
-
-		WriteCentered(screen, "GAME OVER", line1Y, 16)
-		WriteCentered(screen, fmt.Sprintf("Score: %d", g.currentScore), line2Y, 16)
-		WriteCentered(screen, "Press button to return to the game wheel", line3Y, line3H)
 	}
 }
 

@@ -2,7 +2,6 @@ package tdcgame
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 type Player struct {
@@ -77,7 +76,7 @@ func (p *Player) switchAnim(anim *Animation) {
 	}
 }
 
-func (p *Player) Update(dt float64, level Level, tdcgamePlayerUpdate PlayerUpdate) (error) {
+func (p *Player) Update(dt float64, level Level, tdcgamePlayerUpdate PlayerUpdate) error {
 	if ebiten.IsKeyPressed(ebiten.KeyA) {
 		p.autorun = true
 	}

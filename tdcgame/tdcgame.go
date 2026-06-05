@@ -1,6 +1,8 @@
 // Package tdcgame package containing whats needed to make a cool game
 package tdcgame
 
+import "github.com/hajimehoshi/ebiten/v2"
+
 type TdcGame interface {
 	GetGameObjects() []GameObject
 
@@ -18,6 +20,13 @@ type TdcGameWithPlayer interface {
 }
 
 type PlayerUpdate func(buttonpressed bool, dt float64, level Level, player *MovingSquare)
+
+// GameWithCustomDraw is optionally implemented by games that want full control
+// over rendering instead of using the default GameRunner draw.
+// The framework still draws the game over overlay on top.
+type GameWithCustomDraw interface {
+	CustomDraw(screen *ebiten.Image)
+}
 
 type GameState int
 
