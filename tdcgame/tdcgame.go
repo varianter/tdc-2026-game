@@ -20,8 +20,8 @@ type PlayerUpdate func(buttonpressed bool, dt float64, level Level, player *Movi
 type GameState int
 
 const (
-	Running GameObjectType = iota
-	GameOver
+	Running  GameState = iota
+	GameOver GameState = iota
 )
 
 type GameParameters struct {
