@@ -48,16 +48,20 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func (g *Game) Update() error {
+	if ebiten.IsKeyPressed(ebiten.KeyQ) {
+		g.f = nil
+		g.activeGame = ""
+		return nil
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyR) {
+		g.activeGame = "tdcrunner"
+	}
+
 	// We need to start a new game
 	if g.activeGame != "" && g.f == nil {
 		log.Println("Creating runner game")
 		g.f = createGameFramework(g.activeGame)
-		return nil
-	}
-
-	if ebiten.IsKeyPressed(ebiten.KeyQ) {
-		g.f = nil
-		g.activeGame = ""
 		return nil
 	}
 
@@ -91,13 +95,17 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{30, 30, 30, 255})
 
 	// Draw info
-	msg := fmt.Sprintf("Please select a game by launching with an argument %f", ebiten.ActualTPS())
+	Write(screen, "Please select a game.", 0, 150, 16)
+	Write(screen, "Press R to start TDCRUNNER", 0, 170, 16)
+}
+
+func Write(s *ebiten.Image, msg string, x, y int, size int) {
 	op := &text.DrawOptions{}
-	op.GeoM.Translate(0, 0) // top left of screen
+	op.GeoM.Translate(float64(x), float64(y))
 	op.ColorScale.ScaleWithColor(color.White)
-	text.Draw(screen, msg, &text.GoTextFace{
+	text.Draw(s, msg, &text.GoTextFace{
 		Source: mplusFaceSource,
-		Size:   8,
+		Size:   float64(size),
 	}, op)
 }
 
