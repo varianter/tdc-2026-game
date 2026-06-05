@@ -87,6 +87,8 @@ func createGameFramework(gameName string) *tdcgame.GameRunner {
 	switch gameName {
 	case "tdcrunner":
 		return tdcgame.NewGameFrameworkWithPlayer(assets, &tdcrunner.TdcRunner{}, scoreKeeper, gameName)
+	case "bounce":
+		return tdcgame.NewGameFrameworkWithPlayer(assets, bounce.NewBounce(assets), scoreKeeper, gameName)
 	default:
 		panic(fmt.Sprintf("Unknown game: %s", gameName))
 	}
@@ -110,28 +112,9 @@ func init() {
 	wheelGames = append(wheelGames, gameEntry{
 		name:  "BOUNCE",
 		color: color.RGBA{180, 50, 220, 255},
+		key:   ebiten.KeyB,
 		newScene: func() Scene {
-			return &BounceScene{game: bounce.New(assets)}
+			return &GameRunnerScene{runner: createGameFramework("bounce")}
 		},
 	})
-}
-
-type BounceScene struct {
-	game *bounce.Game
-}
-
-func (s *BounceScene) Update(dt float64) (Scene, error) {
-	if inpututil.IsKeyJustPressed(ebiten.KeyQ) {
-		return NewLauncherScene(), nil
-	}
-	if s.game.GameOver && inpututil.IsKeyJustPressed(ebiten.KeySpace) {
-		s.game = bounce.New(assets)
-		return nil, nil
-	}
-	s.game.Update(dt, ebiten.IsKeyPressed(ebiten.KeySpace), inpututil.IsKeyJustPressed(ebiten.KeySpace))
-	return nil, nil
-}
-
-func (s *BounceScene) Draw(screen *ebiten.Image) {
-	s.game.Draw(screen)
 }

@@ -643,14 +643,5 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("SHIELD: %.1fs", g.shieldTimer), screenW/2-30, hudY)
 	}
 
-	if g.GameOver {
-		vector.FillRect(screen, 0, 0, float32(screenW), float32(screenH), color.RGBA{0, 0, 0, 160}, false)
-
-		msg := "GAME OVER"
-		ebitenutil.DebugPrintAt(screen, msg, (screenW-len(msg)*6)/2, screenH/2-20)
-		scoreMsg := fmt.Sprintf("SCORE: %d", g.score)
-		ebitenutil.DebugPrintAt(screen, scoreMsg, (screenW-len(scoreMsg)*6)/2, screenH/2)
-		hint := "SPACE to retry  |  Q to quit"
-		ebitenutil.DebugPrintAt(screen, hint, (screenW-len(hint)*6)/2, screenH/2+20)
-	}
+	// Game over overlay is drawn by the framework's GameRunner
 }
