@@ -69,6 +69,9 @@ func (s *GameRunnerScene) Update(dt float64) (Scene, error) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyQ) {
 		return NewLauncherScene(), nil
 	}
+	if s.runner.State() == tdcgame.GameOver && inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		return NewLauncherScene(), nil
+	}
 	return nil, s.runner.Update()
 }
 

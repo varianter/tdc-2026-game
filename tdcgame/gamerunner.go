@@ -78,6 +78,10 @@ func (cam *Camera) Follow(player *Player, screenW, screenH int) {
 	cam.y = -player.y
 }
 
+func (g *GameRunner) State() GameState {
+	return g.game.GetGameState()
+}
+
 func (g *GameRunner) Update() error {
 	dt := 1.0 / float64(ebiten.TPS()) // calculate deltatime based on TPS, ~0.0166 at 60 TPS
 	// TODO: Detect type of game and call correct update function
@@ -127,7 +131,24 @@ func (g *GameRunner) Draw(screen *ebiten.Image) {
 		g.RectXY(c, float32(GameEnd+4), float32(64), float32(30), float32(20), color.RGBA{255, 56, 147, 255})
 	}
 
-	Write(screen, fmt.Sprintf("Score %d", g.currentScore), 0, 0, 16)
+	if g.game.GetGameState() == GameOver {
+		const pad = 12
+		line1Y := ScreenH/2 - 28
+		line2Y := ScreenH/2 - 4
+		line3Y := ScreenH/2 + 20
+		line3H := 12 // font size of line 3
+
+		bgX := float32(ScreenW/2) - 140
+		bgY := float32(line1Y - pad)
+		bgW := float32(280)
+		bgH := float32(line3Y+line3H+pad) - bgY
+
+		vector.FillRect(screen, bgX, bgY, bgW, bgH, color.RGBA{40, 40, 40, 200}, false)
+
+		WriteCentered(screen, "GAME OVER", line1Y, 16)
+		WriteCentered(screen, fmt.Sprintf("Score: %d", g.currentScore), line2Y, 16)
+		WriteCentered(screen, "Press button to return to the game wheel", line3Y, line3H)
+	}
 }
 
 // Startflag
@@ -158,6 +179,14 @@ func Write(s *ebiten.Image, msg string, x, y int, size int) {
 		Source: mplusFaceSource,
 		Size:   float64(size),
 	}, op)
+}
+
+func WriteCentered(s *ebiten.Image, msg string, y int, size int) {
+	op := &text.DrawOptions{}
+	op.GeoM.Translate(float64(ScreenW/2), float64(y))
+	op.PrimaryAlign = text.AlignCenter
+	op.ColorScale.ScaleWithColor(color.White)
+	text.Draw(s, msg, &text.GoTextFace{Source: mplusFaceSource, Size: float64(size)}, op)
 }
 
 func init() {
