@@ -40,7 +40,6 @@ type GameRunner struct {
 	gameName          string
 	runtime           float64
 	started           bool
-	audio             *Audio
 }
 
 func NewGameFrameworkWithPlayer(embed embed.FS, game TdcGameWithPlayer, scoreKeeper *ScoreKeeper, gameName string) *GameRunner {
@@ -53,7 +52,6 @@ func NewGameFrameworkWithPlayer(embed embed.FS, game TdcGameWithPlayer, scoreKee
 	return &GameRunner{
 		player:            player,
 		assets:            assets,
-		audio:             LoadAudio(embed),
 		level:             NewLevelFromObjects(objs),
 		game:              game,
 		params:            params,
@@ -120,20 +118,12 @@ func (g *GameRunner) Update() error {
 			g.previousGameState = GameOver
 		}
 		if gp, ok := g.game.(TdcGameWithPlayer); ok {
-			if g.params.IsFlying && inpututil.IsKeyJustPressed(ebiten.KeySpace) {
-				g.audio.Play(SoundWingFlap)
-			}
-
 			err := g.player.Update(dt, *g.level, gp.GetPlayerUpdateFunc())
 			if err != nil {
 				return err
 			}
 
-			newScore := g.game.GetCurrentScore()
-			for i := 0; i < newScore-g.currentScore; i++ {
-				g.audio.Play(SoundCoinCollect)
-			}
-			g.currentScore = newScore
+			g.currentScore = g.game.GetCurrentScore()
 			if g.params.ShouldCameraFollowPlayer {
 				g.camera.Follow(g.player, ScreenH, ScreenW)
 			}
@@ -143,7 +133,6 @@ func (g *GameRunner) Update() error {
 	state := g.game.GetGameState()
 	if state != g.previousGameState {
 		if state == GameOver {
-			g.audio.Play(SoundScream)
 			if g.scoreKeeper != nil {
 				if err := g.scoreKeeper.AddScore(g.gameName, g.currentScore); err != nil {
 					log.Printf("failed to save score: %v", err)

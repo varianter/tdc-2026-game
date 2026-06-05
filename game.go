@@ -30,9 +30,6 @@ func (c *Canvas) Rect(x, y, w, h float32, clr color.Color) {
 
 //go:embed assets/tdcgjenger.png
 //go:embed assets/ground.png
-//go:embed assets/audio/coincollect.ogg
-//go:embed assets/audio/wingflap.ogg
-//go:embed assets/audio/scream.ogg
 var assets embed.FS
 
 const (
@@ -91,7 +88,7 @@ func createGameFramework(gameName string) *tdcgame.GameRunner {
 	case "tdcrunner":
 		return tdcgame.NewGameFrameworkWithPlayer(assets, &tdcrunner.TdcRunner{}, scoreKeeper, gameName)
 	case "flappy-guy":
-		return tdcgame.NewGameFrameworkWithPlayer(assets, &flappyguy.FlappyGuy{}, scoreKeeper, gameName)
+		return tdcgame.NewGameFrameworkWithPlayer(assets, flappyguy.New(), scoreKeeper, gameName)
 	default:
 		panic(fmt.Sprintf("Unknown game: %s", gameName))
 	}

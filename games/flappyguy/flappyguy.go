@@ -19,6 +19,21 @@ type FlappyGuy struct {
 	runtime      float64
 	currentScore int
 	wasPressed   bool
+	audio        *tdcgame.Audio
+}
+
+func New() *FlappyGuy {
+	return &FlappyGuy{
+		audio: loadAudio(),
+	}
+}
+
+func (g *FlappyGuy) setGameOver() {
+	if g.gameState == tdcgame.GameOver {
+		return
+	}
+	g.gameState = tdcgame.GameOver
+	g.audio.Play(soundScream)
 }
 
 func (g *FlappyGuy) GetCurrentScore() int {
@@ -56,7 +71,7 @@ func (g *FlappyGuy) GetPlayerUpdateFunc() tdcgame.PlayerUpdate {
 		}
 		g.runtime += dt
 		if g.runtime >= 120 {
-			g.gameState = tdcgame.GameOver
+			g.setGameOver()
 			return
 		}
 
@@ -64,6 +79,7 @@ func (g *FlappyGuy) GetPlayerUpdateFunc() tdcgame.PlayerUpdate {
 		g.wasPressed = buttonpressed
 		if flap {
 			p.Vy = flapForce
+			g.audio.Play(soundWingFlap)
 		}
 
 		p.Onground = false
@@ -77,18 +93,19 @@ func (g *FlappyGuy) GetPlayerUpdateFunc() tdcgame.PlayerUpdate {
 			case tdcgame.Coin:
 				coins++
 				iter.RegisterCollision()
+				g.audio.Play(soundCoinCollect)
 			case tdcgame.Platform:
-				g.gameState = tdcgame.GameOver
+				g.setGameOver()
 				return
 			}
 		}
 
 		if p.P.Y <= 0 {
-			g.gameState = tdcgame.GameOver
+			g.setGameOver()
 			return
 		}
 		if p.P.Y+p.H > maxY {
-			g.gameState = tdcgame.GameOver
+			g.setGameOver()
 			return
 		}
 

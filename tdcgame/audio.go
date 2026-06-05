@@ -12,12 +12,6 @@ import (
 
 const audioSampleRate = 44100
 
-const (
-	SoundCoinCollect = "coincollect"
-	SoundWingFlap    = "wingflap"
-	SoundScream      = "scream"
-)
-
 var (
 	audioContext     *audio.Context
 	audioContextOnce sync.Once
@@ -34,9 +28,9 @@ type Audio struct {
 	clips map[string][]byte
 }
 
-func LoadAudio(assets embed.FS) *Audio {
+func LoadAudio(assets embed.FS, names ...string) *Audio {
 	a := &Audio{clips: make(map[string][]byte)}
-	for _, name := range []string{SoundCoinCollect, SoundWingFlap, SoundScream} {
+	for _, name := range names {
 		data, err := assets.ReadFile("assets/audio/" + name + ".ogg")
 		if err != nil {
 			log.Printf("audio: failed to load %s: %v", name, err)
