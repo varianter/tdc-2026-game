@@ -26,23 +26,35 @@ const (
 
 // GameRunner interface with helpers to make it easier to make a game
 type GameRunner struct {
-	player       *Player
-	camera       Camera
-	assets       *Assets
-	level        *Level
-	game         TdcGame
-	params       *GameParameters
-	currentScore int
+	player            *Player
+	camera            Camera
+	assets            *Assets
+	level             *Level
+	game              TdcGame
+	params            *GameParameters
+	currentScore      int
+	previousGameState GameState
+	scoreKeeper       *ScoreKeeper
+	gameName          string
 }
 
-func NewGameFrameworkWithPlayer(embed embed.FS, game TdcGameWithPlayer) *GameRunner {
+func NewGameFrameworkWithPlayer(embed embed.FS, game TdcGameWithPlayer, scoreKeeper *ScoreKeeper, gameName string) *GameRunner {
 	params := game.GetGameParameters()
 	assets := LoadAssets(embed)
 	sheet := LoadSpriteSheet(assets, 64, 64)
 	player := Newplayer(sheet, params)
 	objs := game.GetGameObjects()
 
-	return &GameRunner{player: player, assets: assets, level: NewLevelFromObjects(objs), game: game, params: params}
+	return &GameRunner{
+		player:            player,
+		assets:            assets,
+		level:             NewLevelFromObjects(objs),
+		game:              game,
+		params:            params,
+		previousGameState: game.GetGameState(),
+		scoreKeeper:       scoreKeeper,
+		gameName:          gameName,
+	}
 }
 
 type Canvas struct {
@@ -86,14 +98,26 @@ func (g *GameRunner) Update() error {
 	dt := 1.0 / float64(ebiten.TPS()) // calculate deltatime based on TPS, ~0.0166 at 60 TPS
 	// TODO: Detect type of game and call correct update function
 
-	if gp, ok := g.game.(TdcGameWithPlayer); ok {
-		coins, err := g.player.Update(dt, *g.level, gp.GetPlayerUpdateFunc())
-		if err != nil {
-			return err
-		}
+	if g.previousGameState != GameOver {
+		if gp, ok := g.game.(TdcGameWithPlayer); ok {
+			err := g.player.Update(dt, *g.level, gp.GetPlayerUpdateFunc())
+			if err != nil {
+				return err
+			}
 
-		g.currentScore += coins
-		g.camera.Follow(g.player, ScreenH, ScreenW)
+			g.currentScore = g.game.GetCurrentScore()
+			g.camera.Follow(g.player, ScreenH, ScreenW)
+		}
+	}
+
+	state := g.game.GetGameState()
+	if state != g.previousGameState {
+		if state == GameOver && g.scoreKeeper != nil {
+			if err := g.scoreKeeper.AddScore(g.gameName, g.currentScore); err != nil {
+				log.Printf("failed to save score: %v", err)
+			}
+		}
+		g.previousGameState = state
 	}
 
 	return nil

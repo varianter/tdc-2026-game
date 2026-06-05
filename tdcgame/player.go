@@ -76,7 +76,7 @@ func (p *Player) switchAnim(anim *Animation) {
 	}
 }
 
-func (p *Player) Update(dt float64, level Level, tdcgamePlayerUpdate PlayerUpdate) (int, error) {
+func (p *Player) Update(dt float64, level Level, tdcgamePlayerUpdate PlayerUpdate) (error) {
 	if ebiten.IsKeyPressed(ebiten.KeyA) {
 		p.autorun = true
 	}
@@ -96,7 +96,7 @@ func (p *Player) Update(dt float64, level Level, tdcgamePlayerUpdate PlayerUpdat
 	}
 
 	pSquare := p.ToCollisionSquare()
-	coins := tdcgamePlayerUpdate(ebiten.IsKeyPressed(ebiten.KeySpace), dt, level, &pSquare)
+	tdcgamePlayerUpdate(ebiten.IsKeyPressed(ebiten.KeySpace), dt, level, &pSquare)
 
 	nextX := pSquare.P.X - p.collisionOffsetX
 
@@ -116,7 +116,7 @@ func (p *Player) Update(dt float64, level Level, tdcgamePlayerUpdate PlayerUpdat
 	p.onground = pSquare.Onground
 
 	p.currentAnimation.Update(dt)
-	return coins, nil
+	return nil
 }
 
 func (p *Player) ToCollisionSquare() MovingSquare {

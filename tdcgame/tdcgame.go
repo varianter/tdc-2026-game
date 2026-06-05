@@ -7,6 +7,8 @@ type TdcGame interface {
 	GetGameParameters() *GameParameters
 
 	GetGameState() GameState
+
+	GetCurrentScore() int
 }
 
 type TdcGameWithPlayer interface {
@@ -15,7 +17,7 @@ type TdcGameWithPlayer interface {
 	GetPlayerUpdateFunc() PlayerUpdate
 }
 
-type PlayerUpdate func(buttonpressed bool, dt float64, level Level, player *MovingSquare) int
+type PlayerUpdate func(buttonpressed bool, dt float64, level Level, player *MovingSquare)
 
 type GameState int
 

@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"image/color"
+	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -79,16 +80,24 @@ func (s *GameRunnerScene) Draw(screen *ebiten.Image) {
 	s.runner.Draw(screen)
 }
 
+var scoreKeeper *tdcgame.ScoreKeeper
+
 func createGameFramework(gameName string) *tdcgame.GameRunner {
 	switch gameName {
 	case "tdcrunner":
-		return tdcgame.NewGameFrameworkWithPlayer(assets, &tdcrunner.TdcRunner{})
+		return tdcgame.NewGameFrameworkWithPlayer(assets, &tdcrunner.TdcRunner{}, scoreKeeper, gameName)
 	default:
 		panic(fmt.Sprintf("Unknown game: %s", gameName))
 	}
 }
 
 func init() {
+	var err error
+	scoreKeeper, err = tdcgame.NewScoreKeeper("scores.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	wheelGames = append(wheelGames, gameEntry{
 		name:  "TDCRUNNER",
 		color: color.RGBA{220, 60, 60, 255},
