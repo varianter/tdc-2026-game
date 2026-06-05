@@ -2,6 +2,20 @@
 
 Flere spill som kan spilles ved å trykke en enkelt knapp.
 
+## Get started
+
+Du kan kjøre standspillet fra CLI med:
+
+```bash
+go run .
+```
+
+Om du ønsker å starte et spesifikt spill (for utvikling, bytt ut `tdcrunner` med ditt spill-navn):
+
+```bash
+go run . -game=tdcrunner
+```
+
 # Rammen
 
 ## Spillvelger (under utvikling)
