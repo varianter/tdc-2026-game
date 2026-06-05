@@ -5,6 +5,7 @@ import "variant.dev/tdcgame/tdcgame"
 
 type TdcRunner struct {
 	gameState tdcgame.GameState
+	runtime   float64
 }
 
 func (r *TdcRunner) GetCurrentScore() {
@@ -62,6 +63,11 @@ func (r *TdcRunner) GetGameParameters() *tdcgame.GameParameters {
 
 func (r *TdcRunner) GetPlayerUpdateFunc() tdcgame.PlayerUpdate {
 	return func(buttonpressed bool, dt float64, level tdcgame.Level, p *tdcgame.MovingSquare) int {
+		r.runtime += dt
+		if r.runtime >= 120 {
+			r.gameState = tdcgame.GameOver
+		}
+
 		if p.Onground && buttonpressed {
 			p.Vy = 300
 		}
