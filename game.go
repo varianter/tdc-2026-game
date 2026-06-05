@@ -68,16 +68,37 @@ func (g *Game) Draw(screen *ebiten.Image) {
 // GameRunnerScene wraps a tdcgame.GameRunner as a Scene.
 // Pressing Q returns to the launcher.
 type GameRunnerScene struct {
-	runner *tdcgame.GameRunner
+	runner          *tdcgame.GameRunner
+	gameName        string
+	spaceTimer      float64 // time since first space press; -1 = not active
+	doubleTapWindow float64
 }
+
+const doubleTapWindow = 0.35
 
 func (s *GameRunnerScene) Update(dt float64) (Scene, error) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyQ) {
 		return NewLauncherScene(), nil
 	}
-	if s.runner.State() == tdcgame.GameOver && inpututil.IsKeyJustPressed(ebiten.KeySpace) {
-		return NewLauncherScene(), nil
+
+	if s.runner.State() == tdcgame.GameOver {
+		if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+			if s.spaceTimer >= 0 {
+				// Second press within window: restart
+				return &GameRunnerScene{runner: createGameFramework(s.gameName), gameName: s.gameName, spaceTimer: -1}, nil
+			}
+			// First press: start timer
+			s.spaceTimer = 0
+		}
+
+		if s.spaceTimer >= 0 {
+			s.spaceTimer += dt
+			if s.spaceTimer > doubleTapWindow {
+				return NewLauncherScene(), nil
+			}
+		}
 	}
+
 	return nil, s.runner.Update()
 }
 
@@ -112,7 +133,7 @@ func init() {
 		color: color.RGBA{220, 60, 60, 255},
 		key:   ebiten.KeyR,
 		newScene: func() Scene {
-			return &GameRunnerScene{runner: createGameFramework("tdcrunner")}
+			return &GameRunnerScene{runner: createGameFramework("tdcrunner"), gameName: "tdcrunner", spaceTimer: -1}
 		},
 	})
 	wheelGames = append(wheelGames, gameEntry{
@@ -128,7 +149,7 @@ func init() {
 		color: color.RGBA{60, 180, 220, 255},
 		key:   ebiten.KeyF,
 		newScene: func() Scene {
-			return &GameRunnerScene{runner: createGameFramework("flappy-guy")}
+			return &GameRunnerScene{runner: createGameFramework("flappy-guy"), gameName: "flappy-guy", spaceTimer: -1}
 		},
 	})
 }
