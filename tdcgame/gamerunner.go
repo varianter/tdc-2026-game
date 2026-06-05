@@ -10,22 +10,6 @@ import (
 )
 
 const (
-	// Should be added to a TdcGameParameters struct so implementers can customize
-	WalkSpeed   = 90.0 // px/sec
-	JumpSpeed   = 60
-	Gravity     = 700 // px/sec^2
-	JumpForce   = 300
-	AirControl  = 1
-	AutoRun     = true
-	AnimIdleFPS = 5.0
-	AnimWalkFPS = 10.0
-	AnimRunFPS  = 14.0
-
-	/*
-		Ideas for other parameters:
-		- Camerasettings (where the caemra puts the player)
-
-	*/
 
 	// Should not be changeable by implementers
 	GroundY          = 186
@@ -42,15 +26,17 @@ type GameRunner struct {
 	assets *Assets
 	level  *Level
 	game   TdcGame
+	params *GameParameters
 }
 
 func NewGameFrameworkWithPlayer(embed embed.FS, game TdcGameWithPlayer) *GameRunner {
+	params := game.GetGameParameters()
 	assets := LoadAssets(embed)
 	sheet := LoadSpriteSheet(assets, 64, 64)
-	player := Newplayer(sheet)
+	player := Newplayer(sheet, params)
 	objs := game.GetGameObjects()
 
-	return &GameRunner{player: player, assets: assets, level: NewLevelFromObjects(objs), game: game}
+	return &GameRunner{player: player, assets: assets, level: NewLevelFromObjects(objs), game: game, params: params}
 }
 
 type Canvas struct {

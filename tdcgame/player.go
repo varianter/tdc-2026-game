@@ -17,6 +17,7 @@ type Player struct {
 	direction        float64
 	onground         bool
 	movementScale    float64
+	walkSpeed        float64
 
 	coins              int
 	autorun            bool
@@ -24,20 +25,20 @@ type Player struct {
 	collisionOffsetTop float64
 }
 
-func Newplayer(sheet *SpriteSheet) *Player {
+func Newplayer(sheet *SpriteSheet, params *GameParameters) *Player {
 	player := &Player{
 		sheet: sheet,
 		walkRightAnim: &Animation{
 			Sheet:      sheet,
 			StartFrame: 0,
 			FrameCount: 8,
-			FPS:        AnimWalkFPS,
+			FPS:        params.AnimWalkFPS,
 		},
 		walkLeftAnim: &Animation{
 			Sheet:      sheet,
 			StartFrame: 8,
 			FrameCount: 8,
-			FPS:        AnimWalkFPS,
+			FPS:        params.AnimWalkFPS,
 		},
 		idleRightAnim: &Animation{
 			Sheet:      sheet,
@@ -56,8 +57,9 @@ func Newplayer(sheet *SpriteSheet) *Player {
 		movementScale: 1.0,
 		direction:     1.0,
 		coins:         0,
-		autorun:       AutoRun,
+		autorun:       true,
 		onground:      true,
+		walkSpeed:     params.WalkSpeed,
 
 		// The sprite is 64x64 but the actual drawn pixels are smaller
 		// These values are to make it look more correct
@@ -84,14 +86,14 @@ func (p *Player) Update(dt float64, level Level, fn PlayerUpdate) error {
 		p.autorun = false
 	}
 	if p.autorun {
-		p.vx = WalkSpeed * p.movementScale
+		p.vx = p.walkSpeed * p.movementScale
 	} else {
 		p.vx = 0
 		if ebiten.IsKeyPressed(ebiten.KeyRight) {
-			p.vx = WalkSpeed * p.movementScale
+			p.vx = p.walkSpeed * p.movementScale
 		}
 		if ebiten.IsKeyPressed(ebiten.KeyLeft) {
-			p.vx = -WalkSpeed * p.movementScale
+			p.vx = -p.walkSpeed * p.movementScale
 		}
 	}
 

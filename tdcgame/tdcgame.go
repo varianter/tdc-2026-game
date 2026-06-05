@@ -3,7 +3,8 @@ package tdcgame
 
 type TdcGame interface {
 	GetGameObjects() []GameObject
-	// TODO: getGameParameters() GameParameters returns params for the game, gravity and all that jazz
+
+	GetGameParameters() *GameParameters
 }
 
 type TdcGameWithPlayer interface {
@@ -13,3 +14,30 @@ type TdcGameWithPlayer interface {
 }
 
 type PlayerUpdate func(buttonpressed bool, dt float64, level Level, player *MovingSquare) int
+
+type GameParameters struct {
+	WalkSpeed   float64
+	JumpSpeed   float64
+	Gravity     float64
+	JumpForce   float64
+	AirControl  float64
+	AnimIdleFPS float64
+	AnimWalkFPS float64
+	AnimRunFPS  float64
+}
+
+/*
+	Ideas for other parameters:
+	- Camerasettings (where the caemra puts the player)
+
+*/
+
+// WalkSpeed   = 90.0 // px/sec
+// JumpSpeed   = 60
+// Gravity     = 700 // px/sec^2
+// JumpForce   = 300
+// AirControl  = 1
+// AutoRun     = true
+// AnimIdleFPS = 5.0
+// AnimWalkFPS = 10.0
+// AnimRunFPS  = 14.0
