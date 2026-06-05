@@ -2,7 +2,6 @@ package main
 
 import (
 	"image/color"
-	"log"
 	"math"
 	"math/rand"
 
@@ -50,7 +49,6 @@ func NewLauncherScene() *LauncherScene {
 
 func (l *LauncherScene) Update(dt float64) (Scene, error) {
 	if ebiten.IsKeyPressed(ebiten.KeyR) {
-		log.Print("jakjaskdj")
 		l.winner = 0
 		entry := wheelGames[l.winner] // HACK: Use enum for indexes? idk
 		if entry.newScene != nil {
