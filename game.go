@@ -12,6 +12,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"variant.dev/tdcgame/games/bounce"
 	"variant.dev/tdcgame/games/tdcrunner"
 	"variant.dev/tdcgame/tdcgame"
 )
@@ -97,6 +98,33 @@ func init() {
 			return &GameRunnerScene{runner: createGameFramework("tdcrunner")}
 		},
 	})
+	wheelGames = append(wheelGames, gameEntry{
+		name:  "BOUNCE",
+		color: color.RGBA{180, 50, 220, 255},
+		newScene: func() Scene {
+			return &BounceScene{game: bounce.New()}
+		},
+	})
+}
+
+type BounceScene struct {
+	game *bounce.Game
+}
+
+func (s *BounceScene) Update(dt float64) (Scene, error) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyQ) {
+		return NewLauncherScene(), nil
+	}
+	if s.game.GameOver && inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		s.game = bounce.New()
+		return nil, nil
+	}
+	s.game.Update(dt, ebiten.IsKeyPressed(ebiten.KeySpace), inpututil.IsKeyJustPressed(ebiten.KeySpace))
+	return nil, nil
+}
+
+func (s *BounceScene) Draw(screen *ebiten.Image) {
+	s.game.Draw(screen)
 }
 
 func Write(s *ebiten.Image, msg string, x, y int, size int) {
