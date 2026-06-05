@@ -10,6 +10,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
@@ -38,6 +39,8 @@ type GameRunner struct {
 	scoreKeeper       *ScoreKeeper
 	gameName          string
 	runtime           float64
+	started           bool
+	audio             *Audio
 }
 
 func NewGameFrameworkWithPlayer(embed embed.FS, game TdcGameWithPlayer, scoreKeeper *ScoreKeeper, gameName string) *GameRunner {
@@ -50,6 +53,7 @@ func NewGameFrameworkWithPlayer(embed embed.FS, game TdcGameWithPlayer, scoreKee
 	return &GameRunner{
 		player:            player,
 		assets:            assets,
+		audio:             LoadAudio(embed),
 		level:             NewLevelFromObjects(objs),
 		game:              game,
 		params:            params,
@@ -100,17 +104,36 @@ func (g *GameRunner) Update() error {
 	dt := 1.0 / float64(ebiten.TPS()) // calculate deltatime based on TPS, ~0.0166 at 60 TPS
 	g.runtime += dt
 
+	if !g.started {
+		g.player.UpdateStartScreen(dt)
+		if g.params.ShouldCameraFollowPlayer {
+			g.camera.Follow(g.player, ScreenH, ScreenW)
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+			g.started = true
+		}
+		return nil
+	}
+
 	if g.previousGameState != GameOver {
 		if g.runtime >= MaxRunTime {
 			g.previousGameState = GameOver
 		}
 		if gp, ok := g.game.(TdcGameWithPlayer); ok {
+			if g.params.IsFlying && inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+				g.audio.Play(SoundWingFlap)
+			}
+
 			err := g.player.Update(dt, *g.level, gp.GetPlayerUpdateFunc())
 			if err != nil {
 				return err
 			}
 
-			g.currentScore = g.game.GetCurrentScore()
+			newScore := g.game.GetCurrentScore()
+			for i := 0; i < newScore-g.currentScore; i++ {
+				g.audio.Play(SoundCoinCollect)
+			}
+			g.currentScore = newScore
 			if g.params.ShouldCameraFollowPlayer {
 				g.camera.Follow(g.player, ScreenH, ScreenW)
 			}
@@ -119,9 +142,12 @@ func (g *GameRunner) Update() error {
 
 	state := g.game.GetGameState()
 	if state != g.previousGameState {
-		if state == GameOver && g.scoreKeeper != nil {
-			if err := g.scoreKeeper.AddScore(g.gameName, g.currentScore); err != nil {
-				log.Printf("failed to save score: %v", err)
+		if state == GameOver {
+			g.audio.Play(SoundScream)
+			if g.scoreKeeper != nil {
+				if err := g.scoreKeeper.AddScore(g.gameName, g.currentScore); err != nil {
+					log.Printf("failed to save score: %v", err)
+				}
 			}
 		}
 		g.previousGameState = state
@@ -135,6 +161,20 @@ func (g *GameRunner) Draw(screen *ebiten.Image) {
 		cd.CustomDraw(screen)
 	} else {
 		g.defaultDraw(screen)
+	}
+
+	if !g.started {
+		const pad = 12
+		lineY := ScreenH/2 - 6
+		lineH := 14
+
+		bgX := float32(ScreenW/2) - 120
+		bgY := float32(lineY - pad)
+		bgW := float32(240)
+		bgH := float32(lineH + pad*2)
+
+		vector.FillRect(screen, bgX, bgY, bgW, bgH, color.RGBA{40, 40, 40, 200}, false)
+		WriteCentered(screen, "Press SPACE to start", lineY, lineH)
 	}
 
 	if g.game.GetGameState() == GameOver {

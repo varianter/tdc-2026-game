@@ -23,13 +23,13 @@ var sokkerData []byte
 var antiSokkerData []byte
 
 const (
-	screenW       = 426
-	screenH       = 240
+	screenW        = 426
+	screenH        = 240
 	playerDrawSize = 32
-	playerHitW    = 16.0
-	playerHitH    = 22.0
-	playerHitOffX = 8.0
-	playerHitOffY = 6.0
+	playerHitW     = 16.0
+	playerHitH     = 22.0
+	playerHitOffX  = 8.0
+	playerHitOffY  = 6.0
 
 	wallThickness = 6
 	playTop       = float64(wallThickness)
@@ -144,10 +144,9 @@ func New(assets embed.FS) *Game {
 		Columns: playerImg.Bounds().Dx() / 64,
 	}
 	anim := &tdcgame.Animation{
-		Sheet:      sheet,
-		StartFrame: 0,
-		FrameCount: 8,
-		FPS:        12,
+		Sheet:  sheet,
+		Frames: []int{0, 1, 2, 3, 4, 5, 6, 7},
+		FPS:    12,
 	}
 
 	sokImg, _, err := image.Decode(bytes.NewReader(sokkerData))

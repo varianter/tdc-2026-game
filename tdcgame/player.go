@@ -10,12 +10,14 @@ type Player struct {
 	walkLeftAnim     *Animation
 	idleRightAnim    *Animation
 	idleLeftAnim     *Animation
+	flyAnim         *Animation
 	currentAnimation *Animation
 	vx, vy           float64
 	x, y             float64
 	h, w             float64
 	direction        float64
 	onground         bool
+	isFlying         bool
 	movementScale    float64
 	walkSpeed        float64
 
@@ -27,36 +29,22 @@ type Player struct {
 func Newplayer(sheet *SpriteSheet, params *GameParameters) *Player {
 	player := &Player{
 		sheet: sheet,
-		walkRightAnim: &Animation{
-			Sheet:      sheet,
-			StartFrame: 0,
-			FrameCount: 8,
-			FPS:        params.AnimWalkFPS,
+		walkRightAnim: NewAnimation(sheet, 0, 8, params.AnimWalkFPS),
+		walkLeftAnim: NewAnimation(sheet, 8, 8, params.AnimWalkFPS),
+		idleRightAnim: NewAnimation(sheet, 15, 1, 11),
+		idleLeftAnim: NewAnimation(sheet, 15, 1, 11),
+		flyAnim: &Animation{
+			Sheet: sheet,
+			Frames: []int{3,6,7},
+			FPS: 20,
 		},
-		walkLeftAnim: &Animation{
-			Sheet:      sheet,
-			StartFrame: 8,
-			FrameCount: 8,
-			FPS:        params.AnimWalkFPS,
-		},
-		idleRightAnim: &Animation{
-			Sheet:      sheet,
-			StartFrame: 15,
-			FrameCount: 1,
-			FPS:        11,
-		},
-		idleLeftAnim: &Animation{
-			Sheet:      sheet,
-			StartFrame: 15,
-			FrameCount: 1,
-			FPS:        11,
-		},
-		x: 0, y: 0,
+		x: 0, y: params.StartY,
 		h: 64, w: 64,
 		movementScale: 1.0,
 		direction:     1.0,
 		autorun:       true,
-		onground:      true,
+		onground:      !params.IsFlying,
+		isFlying:      params.IsFlying,
 		walkSpeed:     params.WalkSpeed,
 
 		// The sprite is 64x64 but the actual drawn pixels are smaller
@@ -64,9 +52,22 @@ func Newplayer(sheet *SpriteSheet, params *GameParameters) *Player {
 		collisionOffsetX:   15,
 		collisionOffsetTop: 15,
 	}
-	player.currentAnimation = player.idleRightAnim
+	if params.IsFlying {
+		player.currentAnimation = player.flyAnim
+	} else {
+		player.currentAnimation = player.walkRightAnim
+	}
 
 	return player
+}
+
+func (p *Player) UpdateStartScreen(dt float64) {
+	if p.isFlying {
+		p.switchAnim(p.flyAnim)
+	} else {
+		p.switchAnim(p.walkRightAnim)
+	}
+	p.currentAnimation.Update(dt)
 }
 
 func (p *Player) switchAnim(anim *Animation) {
@@ -101,11 +102,15 @@ func (p *Player) Update(dt float64, level Level, tdcgamePlayerUpdate PlayerUpdat
 	nextX := pSquare.P.X - p.collisionOffsetX
 
 	// Update animation
-	if nextX > p.x {
-		p.switchAnim(p.walkRightAnim)
-	}
-	if nextX < p.x {
-		p.switchAnim(p.walkLeftAnim)
+	if(p.isFlying) {
+		p.switchAnim(p.flyAnim)
+	} else {
+		if nextX > p.x {
+			p.switchAnim(p.walkRightAnim)
+		}
+		if nextX < p.x {
+			p.switchAnim(p.walkLeftAnim)
+		}
 	}
 
 	p.x = nextX

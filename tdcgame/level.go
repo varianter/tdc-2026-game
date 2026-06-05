@@ -154,6 +154,10 @@ func NewPlatform(x, y float64) GameObject {
 	return GameObject{t: Platform, s: Square{P: Position{X: x, Y: y}, W: float64(100), H: float64(32)}}
 }
 
+func NewBox(x, y, w, h float64) GameObject {
+	return GameObject{t: Platform, s: Square{P: Position{X: x, Y: y}, W: w, H: h}}
+}
+
 func NewCoin(x, y float64) GameObject {
 	return GameObject{t: Coin, s: Square{P: Position{X: x, Y: y}, W: float64(10), H: float64(10)}}
 }
