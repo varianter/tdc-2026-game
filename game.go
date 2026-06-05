@@ -9,6 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"variant.dev/tdcgame/games/flappyguy"
 	"variant.dev/tdcgame/games/tdcrunner"
 	"variant.dev/tdcgame/tdcgame"
 )
@@ -29,6 +30,9 @@ func (c *Canvas) Rect(x, y, w, h float32, clr color.Color) {
 
 //go:embed assets/tdcgjenger.png
 //go:embed assets/ground.png
+//go:embed assets/audio/coincollect.ogg
+//go:embed assets/audio/wingflap.ogg
+//go:embed assets/audio/scream.ogg
 var assets embed.FS
 
 const (
@@ -86,6 +90,8 @@ func createGameFramework(gameName string) *tdcgame.GameRunner {
 	switch gameName {
 	case "tdcrunner":
 		return tdcgame.NewGameFrameworkWithPlayer(assets, &tdcrunner.TdcRunner{}, scoreKeeper, gameName)
+	case "flappy-guy":
+		return tdcgame.NewGameFrameworkWithPlayer(assets, &flappyguy.FlappyGuy{}, scoreKeeper, gameName)
 	default:
 		panic(fmt.Sprintf("Unknown game: %s", gameName))
 	}
@@ -104,6 +110,13 @@ func init() {
 		key:   ebiten.KeyR,
 		newScene: func() Scene {
 			return &GameRunnerScene{runner: createGameFramework("tdcrunner")}
+		},
+	})
+	wheelGames = append(wheelGames, gameEntry{
+		name:  "FLAPPY-GUY",
+		color: color.RGBA{60, 180, 220, 255},
+		newScene: func() Scene {
+			return &GameRunnerScene{runner: createGameFramework("flappy-guy")}
 		},
 	})
 }

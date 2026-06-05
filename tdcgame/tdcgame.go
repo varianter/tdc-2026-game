@@ -36,6 +36,8 @@ type GameParameters struct {
 	AnimWalkFPS              float64
 	AnimRunFPS               float64
 	ShouldCameraFollowPlayer bool
+	IsFlying                 bool
+	StartY                   float64
 }
 
 /*

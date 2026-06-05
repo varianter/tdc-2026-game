@@ -51,10 +51,21 @@ func (s *SpriteSheet) Frame(index int) *ebiten.Image {
 
 type Animation struct {
 	Sheet      *SpriteSheet
-	StartFrame int // first frame of this animation row
-	FrameCount int // how many frames in the animation
+	Frames     []int // frames to use for this animation
 	FPS        float64
 	elapsed    float64
+}
+
+func NewAnimation(sheet *SpriteSheet, startFrame, frameCount int, fps float64) *Animation {
+	frames := make([]int, frameCount)
+	for i := 0; i < frameCount; i++ {
+		frames[i] = startFrame + i
+	}
+	return &Animation{
+		Sheet:      sheet,
+		FPS:        fps,
+		Frames:     frames,
+	}
 }
 
 func (a *Animation) Update(dt float64) {
@@ -62,6 +73,6 @@ func (a *Animation) Update(dt float64) {
 }
 
 func (a *Animation) CurrentFrame() *ebiten.Image {
-	frame := int(a.elapsed*a.FPS) % a.FrameCount
-	return a.Sheet.Frame(a.StartFrame + frame)
+	frame := int(a.elapsed*a.FPS) % len(a.Frames)
+	return a.Sheet.Frame(a.Frames[frame])
 }
