@@ -24,6 +24,7 @@ type gameEntry struct {
 	name     string
 	color    color.RGBA
 	newScene func() Scene
+	key      ebiten.Key
 }
 
 var wheelGames []gameEntry
@@ -48,11 +49,12 @@ func NewLauncherScene() *LauncherScene {
 }
 
 func (l *LauncherScene) Update(dt float64) (Scene, error) {
-	if ebiten.IsKeyPressed(ebiten.KeyR) {
-		l.winner = 0
-		entry := wheelGames[l.winner] // HACK: Use enum for indexes? idk
-		if entry.newScene != nil {
-			return entry.newScene(), nil
+	pressedKeys := inpututil.AppendPressedKeys(make([]ebiten.Key, ebiten.KeyMax))
+	for _, k := range pressedKeys {
+		for _, g := range wheelGames {
+			if g.key == k {
+				return g.newScene(), nil
+			}
 		}
 	}
 

@@ -101,6 +101,7 @@ func init() {
 	wheelGames = append(wheelGames, gameEntry{
 		name:  "TDCRUNNER",
 		color: color.RGBA{220, 60, 60, 255},
+		key:   ebiten.KeyR,
 		newScene: func() Scene {
 			return &GameRunnerScene{runner: createGameFramework("tdcrunner")}
 		},
