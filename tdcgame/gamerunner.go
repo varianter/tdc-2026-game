@@ -21,7 +21,8 @@ const (
 	ScreenW          = 426
 	ScreenH          = 240
 	GroundDrawOffset = 6.0
-	GameEnd          = 1200
+
+	MaxRunTime = 120
 )
 
 // GameRunner interface with helpers to make it easier to make a game
@@ -36,6 +37,7 @@ type GameRunner struct {
 	previousGameState GameState
 	scoreKeeper       *ScoreKeeper
 	gameName          string
+	runtime           float64
 }
 
 func NewGameFrameworkWithPlayer(embed embed.FS, game TdcGameWithPlayer, scoreKeeper *ScoreKeeper, gameName string) *GameRunner {
@@ -96,9 +98,12 @@ func (g *GameRunner) State() GameState {
 
 func (g *GameRunner) Update() error {
 	dt := 1.0 / float64(ebiten.TPS()) // calculate deltatime based on TPS, ~0.0166 at 60 TPS
-	// TODO: Detect type of game and call correct update function
+	g.runtime += dt
 
 	if g.previousGameState != GameOver {
+		if g.runtime >= MaxRunTime {
+			g.previousGameState = GameOver
+		}
 		if gp, ok := g.game.(TdcGameWithPlayer); ok {
 			err := g.player.Update(dt, *g.level, gp.GetPlayerUpdateFunc())
 			if err != nil {
@@ -149,6 +154,8 @@ func (g *GameRunner) Draw(screen *ebiten.Image) {
 		WriteCentered(screen, "GAME OVER", line1Y, 16)
 		WriteCentered(screen, fmt.Sprintf("Score: %d", g.currentScore), line2Y, 16)
 		WriteCentered(screen, "Press button to return to the game wheel", line3Y, line3H)
+	} else {
+		Write(screen, fmt.Sprintf("Score: %d.    Time left: %.1fs", g.game.GetCurrentScore(), MaxRunTime-g.runtime), 5, 5, 8)
 	}
 }
 
@@ -179,9 +186,6 @@ func (g *GameRunner) defaultDraw(screen *ebiten.Image) {
 				g.RectXY(c, float32(gObj.s.P.X), float32(gObj.s.P.Y), float32(gObj.s.W), float32(gObj.s.H), gObj.Color())
 			}
 		}
-		// EndFlag
-		g.RectXY(c, float32(GameEnd+4), float32(0), float32(3), float32(64), color.RGBA{30, 31, 30, 255})
-		g.RectXY(c, float32(GameEnd+4), float32(64), float32(30), float32(20), color.RGBA{255, 56, 147, 255})
 	}
 }
 
