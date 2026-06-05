@@ -50,14 +50,15 @@ func (r *TdcRunner) GetGameObjects() []tdcgame.GameObject {
 
 func (r *TdcRunner) GetGameParameters() *tdcgame.GameParameters {
 	return &tdcgame.GameParameters{
-		WalkSpeed:   90.0,
-		JumpSpeed:   60,
-		Gravity:     700,
-		JumpForce:   300,
-		AirControl:  1,
-		AnimIdleFPS: 5.0,
-		AnimWalkFPS: 10.0,
-		AnimRunFPS:  14.0,
+		WalkSpeed:                90.0,
+		JumpSpeed:                60,
+		Gravity:                  700,
+		JumpForce:                300,
+		AirControl:               1,
+		AnimIdleFPS:              5.0,
+		AnimWalkFPS:              10.0,
+		AnimRunFPS:               14.0,
+		ShouldCameraFollowPlayer: true,
 	}
 }
 

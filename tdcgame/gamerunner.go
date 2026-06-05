@@ -93,7 +93,9 @@ func (g *GameRunner) Update() error {
 		}
 
 		g.currentScore += coins
-		g.camera.Follow(g.player, ScreenH, ScreenW)
+		if g.params.ShouldCameraFollowPlayer {
+			g.camera.Follow(g.player, ScreenH, ScreenW)
+		}
 	}
 
 	return nil

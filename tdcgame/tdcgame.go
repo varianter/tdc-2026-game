@@ -25,14 +25,15 @@ const (
 )
 
 type GameParameters struct {
-	WalkSpeed   float64
-	JumpSpeed   float64
-	Gravity     float64
-	JumpForce   float64
-	AirControl  float64
-	AnimIdleFPS float64
-	AnimWalkFPS float64
-	AnimRunFPS  float64
+	WalkSpeed                float64
+	JumpSpeed                float64
+	Gravity                  float64
+	JumpForce                float64
+	AirControl               float64
+	AnimIdleFPS              float64
+	AnimWalkFPS              float64
+	AnimRunFPS               float64
+	ShouldCameraFollowPlayer bool
 }
 
 /*
