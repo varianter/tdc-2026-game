@@ -102,7 +102,7 @@ func init() {
 		name:  "BOUNCE",
 		color: color.RGBA{180, 50, 220, 255},
 		newScene: func() Scene {
-			return &BounceScene{game: bounce.New()}
+			return &BounceScene{game: bounce.New(assets)}
 		},
 	})
 }
@@ -116,7 +116,7 @@ func (s *BounceScene) Update(dt float64) (Scene, error) {
 		return NewLauncherScene(), nil
 	}
 	if s.game.GameOver && inpututil.IsKeyJustPressed(ebiten.KeySpace) {
-		s.game = bounce.New()
+		s.game = bounce.New(assets)
 		return nil, nil
 	}
 	s.game.Update(dt, ebiten.IsKeyPressed(ebiten.KeySpace), inpututil.IsKeyJustPressed(ebiten.KeySpace))

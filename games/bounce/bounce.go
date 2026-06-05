@@ -2,7 +2,7 @@ package bounce
 
 import (
 	"bytes"
-	_ "embed"
+	"embed"
 	"fmt"
 	"image"
 	"image/color"
@@ -13,10 +13,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"variant.dev/tdcgame/tdcgame"
 )
-
-//go:embed blob.png
-var blobData []byte
 
 //go:embed sokker.png
 var sokkerData []byte
@@ -25,13 +23,17 @@ var sokkerData []byte
 var antiSokkerData []byte
 
 const (
-	screenW    = 426
-	screenH    = 240
-	playerSize = 32
+	screenW       = 426
+	screenH       = 240
+	playerDrawSize = 32
+	playerHitW    = 16.0
+	playerHitH    = 22.0
+	playerHitOffX = 8.0
+	playerHitOffY = 6.0
 
 	wallThickness = 6
 	playTop       = float64(wallThickness)
-	playBottom    = float64(screenH - wallThickness - playerSize)
+	playBottom    = float64(screenH - wallThickness - playerDrawSize)
 
 	baseScrollSpeed      = 60.0
 	maxScrollSpeed       = 250.0
@@ -49,7 +51,8 @@ const (
 	obstacleBaseInterval = 280.0
 	obstacleMinInterval  = 70.0
 
-	doubleTapWindow = 0.25
+	doubleTapEnabled = false
+	doubleTapWindow  = 0.25
 
 	maxSwitches        = 3
 	switchRechargeTime = 5.0
@@ -90,7 +93,7 @@ type particle struct {
 }
 
 type Game struct {
-	blobImg        *ebiten.Image
+	playerAnim     *tdcgame.Animation
 	sokkerImg      *ebiten.Image
 	sokkerGlow     *ebiten.Image
 	antiSokkerImg  *ebiten.Image
@@ -129,11 +132,24 @@ type Game struct {
 	GameOver bool
 }
 
-func New() *Game {
-	img, _, err := image.Decode(bytes.NewReader(blobData))
+func New(assets embed.FS) *Game {
+	playerImg, _, err := ebitenutil.NewImageFromFileSystem(assets, "assets/tdcgjenger.png")
 	if err != nil {
 		panic(err)
 	}
+	sheet := &tdcgame.SpriteSheet{
+		Image:   playerImg,
+		FrameW:  64,
+		FrameH:  64,
+		Columns: playerImg.Bounds().Dx() / 64,
+	}
+	anim := &tdcgame.Animation{
+		Sheet:      sheet,
+		StartFrame: 0,
+		FrameCount: 8,
+		FPS:        12,
+	}
+
 	sokImg, _, err := image.Decode(bytes.NewReader(sokkerData))
 	if err != nil {
 		panic(err)
@@ -146,17 +162,17 @@ func New() *Game {
 	sokkerEbi := ebiten.NewImageFromImage(sokImg)
 	antiSokkerEbi := ebiten.NewImageFromImage(antiSokImg)
 	return &Game{
-		blobImg:        ebiten.NewImageFromImage(img),
+		playerAnim:     anim,
 		sokkerImg:      sokkerEbi,
 		sokkerGlow:     buildSokkerGlow(sokkerEbi, int(powerupDrawSize)),
 		antiSokkerImg:  antiSokkerEbi,
 		antiSokkerGlow: buildSokkerGlow(antiSokkerEbi, int(powerupDrawSize)),
-		playerY:       float64(screenH)/2 - float64(playerSize)/2,
-		playerVY:      -30,
-		scrollSpeed:   baseScrollSpeed,
-		nextObstacleX: float64(screenW) + 100,
-		nextPowerupX:  float64(screenW) + 400,
-		switchesLeft:  maxSwitches,
+		playerY:        float64(screenH)/2 - float64(playerDrawSize)/2,
+		playerVY:       -30,
+		scrollSpeed:    baseScrollSpeed,
+		nextObstacleX:  float64(screenW) + 100,
+		nextPowerupX:   float64(screenW) + 400,
+		switchesLeft:   maxSwitches,
 	}
 }
 
@@ -166,27 +182,30 @@ func (g *Game) Update(dt float64, spacePressed bool, spaceJustPressed bool) {
 	}
 
 	g.timeSinceStart += dt
+	g.playerAnim.Update(dt)
 	g.updateParticles(dt)
 
-	if g.switchesLeft < maxSwitches {
-		g.switchRecharge += dt
-		if g.switchRecharge >= switchRechargeTime {
-			g.switchRecharge -= switchRechargeTime
-			g.switchesLeft++
+	if doubleTapEnabled {
+		if g.switchesLeft < maxSwitches {
+			g.switchRecharge += dt
+			if g.switchRecharge >= switchRechargeTime {
+				g.switchRecharge -= switchRechargeTime
+				g.switchesLeft++
+			}
 		}
-	}
 
-	if spaceJustPressed {
-		if g.timeSinceStart-g.lastReleaseTime < doubleTapWindow && g.lastReleaseTime > 0 && g.switchesLeft > 0 {
-			g.playerVY = -g.playerVY
-			g.switchesLeft--
-			g.switchRecharge = 0
+		if spaceJustPressed {
+			if g.timeSinceStart-g.lastReleaseTime < doubleTapWindow && g.lastReleaseTime > 0 && g.switchesLeft > 0 {
+				g.playerVY = -g.playerVY
+				g.switchesLeft--
+				g.switchRecharge = 0
+			}
 		}
+		if g.spaceWasPressed && !spacePressed {
+			g.lastReleaseTime = g.timeSinceStart
+		}
+		g.spaceWasPressed = spacePressed
 	}
-	if g.spaceWasPressed && !spacePressed {
-		g.lastReleaseTime = g.timeSinceStart
-	}
-	g.spaceWasPressed = spacePressed
 
 	if spacePressed {
 		g.chargeTime += dt
@@ -243,7 +262,7 @@ func (g *Game) Update(dt float64, spacePressed bool, spaceJustPressed bool) {
 	effectiveScroll := g.scrollSpeed * (1.0 + g.scrollBoost)
 	g.cameraX += effectiveScroll * dt
 	g.distance += effectiveScroll * dt
-	g.score = int(g.distance/g.scrollSpeed) + g.bonusScore
+	g.score = g.bonusScore
 
 	if g.shieldTimer > 0 {
 		g.shieldTimer -= dt
@@ -294,7 +313,8 @@ func (g *Game) spawnPowerups() {
 		x := g.nextPowerupX
 
 		kind := powerupShield
-		if g.hasHadShield && g.distance > 3000 && rand.Float64() < 0.35 {
+		antiChance := math.Min(0.6, 0.15+(g.distance-3000)/20000)
+		if g.hasHadShield && g.distance > 3000 && rand.Float64() < antiChance {
 			kind = powerupAntiShield
 		}
 
@@ -338,13 +358,14 @@ func (g *Game) prunePowerups() {
 }
 
 func (g *Game) collectPowerups() {
-	px := g.cameraX + 50
-	py := g.playerY
+	px := g.cameraX + 50 + playerHitOffX
+	py := g.playerY + playerHitOffY
 
 	alive := g.powerups[:0]
 	for _, p := range g.powerups {
-		if px < p.x+powerupCollideSize && px+playerSize > p.x && py < p.y+powerupCollideSize && py+playerSize > p.y {
+		if px < p.x+powerupCollideSize && px+playerHitW > p.x && py < p.y+powerupCollideSize && py+playerHitH > p.y {
 			g.applyPowerup(p)
+			g.bonusScore += 1
 			g.spawnCollectParticles(p.x-g.cameraX+powerupCollideSize/2, p.y+powerupCollideSize/2)
 		} else {
 			alive = append(alive, p)
@@ -370,15 +391,15 @@ func (g *Game) applyPowerup(p powerup) {
 }
 
 func (g *Game) checkCollisions() {
-	px := g.cameraX + 50
-	py := g.playerY
+	px := g.cameraX + 50 + playerHitOffX
+	py := g.playerY + playerHitOffY
 
 	alive := g.obstacles[:0]
 	for _, o := range g.obstacles {
-		if px < o.x+o.w && px+playerSize > o.x && py < o.y+o.h && py+playerSize > o.y {
+		if px < o.x+o.w && px+playerHitW > o.x && py < o.y+o.h && py+playerHitH > o.y {
 			if g.shieldTimer > 0 {
 				g.spawnDestroyParticles(o)
-				g.bonusScore += 30
+				g.bonusScore += 3
 				g.shieldTimer = math.Min(shieldMaxDuration, g.shieldTimer+shieldObstacleDurationAward)
 				continue
 			}
@@ -560,7 +581,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	// player with charge brightness
+	frame := g.playerAnim.CurrentFrame()
 	op := &ebiten.DrawImageOptions{}
+	spriteScale := float64(playerDrawSize) / float64(g.playerAnim.Sheet.FrameW)
+	op.GeoM.Scale(spriteScale, spriteScale)
 	op.GeoM.Translate(50, g.playerY)
 	chargeBright := math.Min(g.chargeTime*2.5, 1.5)
 	r := float32(1.0 + chargeBright*0.4)
@@ -579,14 +603,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if g.shieldTimer > 0 {
 		op.ColorScale.ScaleWithColor(color.RGBA{180, 230, 255, 255})
 	}
-	screen.DrawImage(g.blobImg, op)
+	screen.DrawImage(frame, op)
 
 	// shield aura
 	if g.shieldTimer > 0 {
 		pulse := float32(0.3 + 0.15*math.Sin(g.timeSinceStart*6))
-		cx := float32(50 + playerSize/2)
-		cy := float32(g.playerY + playerSize/2)
-		vector.StrokeCircle(screen, cx, cy, playerSize/2+4, 1.5, color.RGBA{50, 180, 255, uint8(pulse * 255)}, true)
+		cx := float32(50 + playerDrawSize/2)
+		cy := float32(g.playerY + playerDrawSize/2)
+		vector.StrokeCircle(screen, cx, cy, playerDrawSize/2+4, 1.5, color.RGBA{50, 180, 255, uint8(pulse * 255)}, true)
 	}
 
 	// charge bar
@@ -595,15 +619,17 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		vector.FillRect(screen, 50, float32(g.playerY-6), barW, 3, color.RGBA{255, 200, 50, 220}, false)
 	}
 
-	// switch dots below player
-	dotY := float32(g.playerY + playerSize + 4)
-	dotStartX := float32(50 + playerSize/2 - (maxSwitches*8-4)/2)
-	for i := 0; i < maxSwitches; i++ {
-		cx := dotStartX + float32(i*8)
-		if i < g.switchesLeft {
-			vector.FillCircle(screen, cx, dotY, 3, color.RGBA{255, 220, 50, 255}, true)
-		} else {
-			vector.FillCircle(screen, cx, dotY, 3, color.RGBA{80, 70, 40, 255}, true)
+	// switch dots below player (only when double-tap is enabled)
+	if doubleTapEnabled {
+		dotY := float32(g.playerY + playerDrawSize + 4)
+		dotStartX := float32(50 + playerDrawSize/2 - (maxSwitches*8-4)/2)
+		for i := 0; i < maxSwitches; i++ {
+			cx := dotStartX + float32(i*8)
+			if i < g.switchesLeft {
+				vector.FillCircle(screen, cx, dotY, 3, color.RGBA{255, 220, 50, 255}, true)
+			} else {
+				vector.FillCircle(screen, cx, dotY, 3, color.RGBA{80, 70, 40, 255}, true)
+			}
 		}
 	}
 
