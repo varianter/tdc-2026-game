@@ -9,6 +9,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"variant.dev/tdcgame/games/tdcrunner"
@@ -33,70 +34,69 @@ func (c *Canvas) Rect(x, y, w, h float32, clr color.Color) {
 //go:embed assets/ground.png
 var assets embed.FS
 
-type Game struct {
-	activeGame string
-	f          *tdcgame.GameRunner
-}
-
 const (
 	ScreenW = 426
 	ScreenH = 240
 )
+
+type Game struct {
+	currentScene Scene
+}
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return ScreenW, ScreenH
 }
 
 func (g *Game) Update() error {
-	if ebiten.IsKeyPressed(ebiten.KeyQ) {
-		g.f = nil
-		g.activeGame = ""
-		return nil
+	dt := 1.0 / float64(ebiten.TPS())
+	next, err := g.currentScene.Update(dt)
+	if err != nil {
+		return err
 	}
-
-	if ebiten.IsKeyPressed(ebiten.KeyR) {
-		g.activeGame = "tdcrunner"
+	if next != nil {
+		g.currentScene = next
 	}
-
-	// We need to start a new game
-	if g.activeGame != "" && g.f == nil {
-		log.Println("Creating runner game")
-		g.f = createGameFramework(g.activeGame)
-		return nil
-	}
-
-	if g.f != nil {
-		return g.f.Update()
-	}
-
 	return nil
+}
+
+func (g *Game) Draw(screen *ebiten.Image) {
+	g.currentScene.Draw(screen)
+}
+
+// GameRunnerScene wraps a tdcgame.GameRunner as a Scene.
+// Pressing Q returns to the launcher.
+type GameRunnerScene struct {
+	runner *tdcgame.GameRunner
+}
+
+func (s *GameRunnerScene) Update(dt float64) (Scene, error) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyQ) {
+		return NewLauncherScene(), nil
+	}
+	return nil, s.runner.Update()
+}
+
+func (s *GameRunnerScene) Draw(screen *ebiten.Image) {
+	s.runner.Draw(screen)
 }
 
 func createGameFramework(gameName string) *tdcgame.GameRunner {
 	switch gameName {
 	case "tdcrunner":
-		{
-			tdcRunner := &tdcrunner.TdcRunner{}
-			return tdcgame.NewGameFrameworkWithPlayer(assets, tdcRunner)
-		}
+		return tdcgame.NewGameFrameworkWithPlayer(assets, &tdcrunner.TdcRunner{})
 	default:
 		panic(fmt.Sprintf("Unknown game: %s", gameName))
 	}
 }
 
-func (g *Game) Draw(screen *ebiten.Image) {
-	// We are currently running a game, draw it
-	if g.f != nil {
-		g.f.Draw(screen)
-		return
-	}
-
-	// Start screen or game select here
-	screen.Fill(color.RGBA{30, 30, 30, 255})
-
-	// Draw info
-	Write(screen, "Please select a game.", 0, 150, 16)
-	Write(screen, "Press R to start TDCRUNNER", 0, 170, 16)
+func init() {
+	wheelGames = append(wheelGames, gameEntry{
+		name:  "TDCRUNNER",
+		color: color.RGBA{220, 60, 60, 255},
+		newScene: func() Scene {
+			return &GameRunnerScene{runner: createGameFramework("tdcrunner")}
+		},
+	})
 }
 
 func Write(s *ebiten.Image, msg string, x, y int, size int) {
