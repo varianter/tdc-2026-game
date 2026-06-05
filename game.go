@@ -9,6 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"variant.dev/tdcgame/games/bounce"
 	"variant.dev/tdcgame/games/flappyguy"
 	"variant.dev/tdcgame/games/tdcrunner"
 	"variant.dev/tdcgame/tdcgame"
@@ -90,6 +91,8 @@ func createGameFramework(gameName string) *tdcgame.GameRunner {
 	switch gameName {
 	case "tdcrunner":
 		return tdcgame.NewGameFrameworkWithPlayer(assets, &tdcrunner.TdcRunner{}, scoreKeeper, gameName)
+	case "bounce":
+		return tdcgame.NewGameFrameworkWithPlayer(assets, bounce.NewBounce(assets), scoreKeeper, gameName)
 	case "flappy-guy":
 		return tdcgame.NewGameFrameworkWithPlayer(assets, &flappyguy.FlappyGuy{}, scoreKeeper, gameName)
 	default:
@@ -110,6 +113,14 @@ func init() {
 		key:   ebiten.KeyR,
 		newScene: func() Scene {
 			return &GameRunnerScene{runner: createGameFramework("tdcrunner")}
+		},
+	})
+	wheelGames = append(wheelGames, gameEntry{
+		name:  "BOUNCE",
+		color: color.RGBA{180, 50, 220, 255},
+		key:   ebiten.KeyB,
+		newScene: func() Scene {
+			return &GameRunnerScene{runner: createGameFramework("bounce")}
 		},
 	})
 	wheelGames = append(wheelGames, gameEntry{

@@ -157,32 +157,10 @@ func (g *GameRunner) Update() error {
 }
 
 func (g *GameRunner) Draw(screen *ebiten.Image) {
-	screen.Fill(color.RGBA{30, 30, 30, 255})
-
-	c := &Canvas{
-		screen: screen,
-	}
-	w, h := screen.Bounds().Dx(), screen.Bounds().Dy()
-
-	c.Rect(0, 0, float32(w), float32(h), color.RGBA{135, 206, 235, 255}) // sky is light blue, should be replaced with some background
-
-	if _, ok := g.game.(TdcGameWithPlayer); ok {
-		c.TilingGround(g.assets.Sprites["ground"], g.camera.x, g.camera.y, 5000)
-
-		g.DrawImage(c, g.player.currentAnimation.CurrentFrame(), g.player.x, g.player.y)
-
-		g.RectXY(c, float32(-20), float32(0), float32(20), float32(40), color.RGBA{105, 76, 0, 255})
-
-		for _, gObj := range g.level.gameObjects {
-			if gObj.removed {
-				continue
-			}
-			if gObj.t == Flag {
-				g.drawFlag(c, float32(gObj.s.P.X), float32(gObj.s.P.Y), gObj.Color())
-			} else {
-				g.RectXY(c, float32(gObj.s.P.X), float32(gObj.s.P.Y), float32(gObj.s.W), float32(gObj.s.H), gObj.Color())
-			}
-		}
+	if cd, ok := g.game.(GameWithCustomDraw); ok {
+		cd.CustomDraw(screen)
+	} else {
+		g.defaultDraw(screen)
 	}
 
 	if !g.started {
@@ -218,6 +196,36 @@ func (g *GameRunner) Draw(screen *ebiten.Image) {
 		WriteCentered(screen, "Press button to return to the game wheel", line3Y, line3H)
 	} else {
 		Write(screen, fmt.Sprintf("Score: %d.    Time left: %.1fs", g.game.GetCurrentScore(), MaxRunTime-g.runtime), 5, 5, 8)
+	}
+}
+
+func (g *GameRunner) defaultDraw(screen *ebiten.Image) {
+	screen.Fill(color.RGBA{30, 30, 30, 255})
+
+	c := &Canvas{
+		screen: screen,
+	}
+	w, h := screen.Bounds().Dx(), screen.Bounds().Dy()
+
+	c.Rect(0, 0, float32(w), float32(h), color.RGBA{135, 206, 235, 255}) // sky is light blue, should be replaced with some background
+
+	if _, ok := g.game.(TdcGameWithPlayer); ok {
+		c.TilingGround(g.assets.Sprites["ground"], g.camera.x, g.camera.y, 5000)
+
+		g.DrawImage(c, g.player.currentAnimation.CurrentFrame(), g.player.x, g.player.y)
+
+		g.RectXY(c, float32(-20), float32(0), float32(20), float32(40), color.RGBA{105, 76, 0, 255})
+
+		for _, gObj := range g.level.gameObjects {
+			if gObj.removed {
+				continue
+			}
+			if gObj.t == Flag {
+				g.drawFlag(c, float32(gObj.s.P.X), float32(gObj.s.P.Y), gObj.Color())
+			} else {
+				g.RectXY(c, float32(gObj.s.P.X), float32(gObj.s.P.Y), float32(gObj.s.W), float32(gObj.s.H), gObj.Color())
+			}
+		}
 	}
 }
 
