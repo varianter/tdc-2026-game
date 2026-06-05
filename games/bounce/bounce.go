@@ -164,9 +164,9 @@ func New(assets embed.FS) *Game {
 	return &Game{
 		playerAnim:     anim,
 		sokkerImg:      sokkerEbi,
-		sokkerGlow:     buildSokkerGlow(sokkerEbi, int(powerupDrawSize)),
+		sokkerGlow:     buildSokkerGlow(sokImg, int(powerupDrawSize)),
 		antiSokkerImg:  antiSokkerEbi,
-		antiSokkerGlow: buildSokkerGlow(antiSokkerEbi, int(powerupDrawSize)),
+		antiSokkerGlow: buildSokkerGlow(antiSokImg, int(powerupDrawSize)),
 		playerY:        float64(screenH)/2 - float64(playerDrawSize)/2,
 		playerVY:       -30,
 		scrollSpeed:    baseScrollSpeed,
@@ -468,20 +468,21 @@ func (g *Game) updateParticles(dt float64) {
 	g.particles = alive
 }
 
-// buildSokkerGlow creates an outline image from the sokker sprite's alpha channel,
-// scaled to the powerup draw size.
-func buildSokkerGlow(src *ebiten.Image, drawSize int) *ebiten.Image {
+// buildSokkerGlow creates an outline image from the sprite's alpha channel,
+// scaled to the powerup draw size. Uses image.Image to avoid ebiten's
+// ReadPixels restriction before the game loop starts.
+func buildSokkerGlow(src image.Image, drawSize int) *ebiten.Image {
 	sw, sh := src.Bounds().Dx(), src.Bounds().Dy()
 
 	alpha := make([]bool, sw*sh)
 	for py := 0; py < sh; py++ {
 		for px := 0; px < sw; px++ {
-			_, _, _, a := src.At(px, py).RGBA()
+			_, _, _, a := src.At(src.Bounds().Min.X+px, src.Bounds().Min.Y+py).RGBA()
 			alpha[py*sw+px] = a > 0x8000
 		}
 	}
 
-	outline := ebiten.NewImage(sw, sh)
+	outlineImg := image.NewRGBA(image.Rect(0, 0, sw, sh))
 	for py := 0; py < sh; py++ {
 		for px := 0; px < sw; px++ {
 			if alpha[py*sw+px] {
@@ -496,11 +497,12 @@ func buildSokkerGlow(src *ebiten.Image, drawSize int) *ebiten.Image {
 				}
 			}
 			if neighbor {
-				outline.Set(px, py, color.RGBA{255, 255, 255, 255})
+				outlineImg.SetRGBA(px, py, color.RGBA{255, 255, 255, 255})
 			}
 		}
 	}
 
+	outline := ebiten.NewImageFromImage(outlineImg)
 	scaled := ebiten.NewImage(drawSize, drawSize)
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(float64(drawSize)/float64(sw), float64(drawSize)/float64(sh))
