@@ -126,6 +126,7 @@ func init() {
 	wheelGames = append(wheelGames, gameEntry{
 		name:  "FLAPPY-GUY",
 		color: color.RGBA{60, 180, 220, 255},
+		key:   ebiten.KeyF,
 		newScene: func() Scene {
 			return &GameRunnerScene{runner: createGameFramework("flappy-guy")}
 		},

@@ -49,10 +49,9 @@ func NewLauncherScene() *LauncherScene {
 }
 
 func (l *LauncherScene) Update(dt float64) (Scene, error) {
-	pressedKeys := inpututil.AppendJustPressedKeys(nil)
-	for _, k := range pressedKeys {
+	for _, k := range inpututil.AppendJustPressedKeys(nil) {
 		for _, g := range wheelGames {
-			if g.key != 0 && g.key == k {
+			if g.key != ebiten.KeyMax && g.key == k {
 				return g.newScene(), nil
 			}
 		}
