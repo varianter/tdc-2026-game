@@ -17,12 +17,14 @@ var (
 	audioContextOnce sync.Once
 )
 
-func getAudioContext() *audio.Context {
+func GetAudioContext() *audio.Context {
 	audioContextOnce.Do(func() {
 		audioContext = audio.NewContext(audioSampleRate)
 	})
 	return audioContext
 }
+
+func getAudioContext() *audio.Context { return GetAudioContext() }
 
 type Audio struct {
 	clips map[string][]byte

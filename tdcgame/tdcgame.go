@@ -19,6 +19,37 @@ type TdcGameWithPlayer interface {
 	GetPlayerUpdateFunc() PlayerUpdate
 }
 
+// TdcGameWithBackground lets a game draw into the background layer — after the
+// sky rect but before the ground tiles and player. Use for scenery like trees.
+type TdcGameWithBackground interface {
+	TdcGame
+	DrawBackground(screen *ebiten.Image, cameraX, cameraY float64)
+}
+
+// TdcGameWithDraw is an optional interface games can implement to draw custom
+// content on top of the base rendering. cameraX and cameraY are the current
+// camera offsets needed to convert world coordinates to screen coordinates.
+type TdcGameWithDraw interface {
+	TdcGame
+	Draw(screen *ebiten.Image, cameraX, cameraY float64)
+}
+
+// TdcGameWithOverlayDraw lets a game draw HUD/text elements at full device-pixel
+// resolution. Called after the viewport is blitted to screen. scale is the ratio
+// of device pixels to game pixels (e.g. 4.0 on a Retina display at 426-wide).
+// Multiply all coordinates and font sizes by scale.
+type TdcGameWithOverlayDraw interface {
+	TdcGame
+	DrawOverlay(screen *ebiten.Image, scale, cameraX, cameraY float64)
+}
+
+// TdcGameEndX lets a game override the world X position of the end flag.
+// If not implemented, GameEnd is used.
+type TdcGameEndX interface {
+	TdcGame
+	EndX() float64
+}
+
 type PlayerUpdate func(buttonpressed bool, dt float64, level Level, player *MovingSquare)
 
 // GameWithCustomDraw is optionally implemented by games that want full control

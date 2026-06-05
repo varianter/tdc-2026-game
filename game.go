@@ -11,6 +11,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"variant.dev/tdcgame/games/bounce"
 	"variant.dev/tdcgame/games/flappyguy"
+	"variant.dev/tdcgame/games/petthedamncat"
 	"variant.dev/tdcgame/games/tdcrunner"
 	"variant.dev/tdcgame/tdcgame"
 )
@@ -31,6 +32,14 @@ func (c *Canvas) Rect(x, y, w, h float32, clr color.Color) {
 
 //go:embed assets/tdcgjenger.png
 //go:embed assets/ground.png
+//go:embed assets/cats/cat1.png
+//go:embed assets/cats/cat2.png
+//go:embed assets/cats/cat3.png
+//go:embed assets/cats/radioactive.wav
+//go:embed assets/cats/Meow.ogg
+//go:embed assets/cats/alert.mp3
+//go:embed assets/cats/scared.mp3
+//go:embed assets/cats/scaredBig.mp3
 var assets embed.FS
 
 const (
@@ -42,8 +51,16 @@ type Game struct {
 	currentScene Scene
 }
 
+// Layout is required by ebiten.Game; LayoutF is called instead when present.
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return ScreenW, ScreenH
+	return outsideWidth, outsideHeight
+}
+
+// LayoutF returns the full device-pixel window size so the game renders at
+// native resolution. Pixel-art content is upscaled inside Draw via a viewport.
+func (g *Game) LayoutF(outsideWidth, outsideHeight float64) (float64, float64) {
+	s := ebiten.Monitor().DeviceScaleFactor()
+	return outsideWidth * s, outsideHeight * s
 }
 
 func (g *Game) Update() error {
@@ -113,6 +130,10 @@ func createGameFramework(gameName string) *tdcgame.GameRunner {
 		return tdcgame.NewGameFrameworkWithPlayer(assets, bounce.NewBounce(assets), scoreKeeper, gameName)
 	case "flappy-guy":
 		return tdcgame.NewGameFrameworkWithPlayer(assets, flappyguy.New(), scoreKeeper, gameName)
+	case "petthedamncat":
+		catGame := &petthedamncat.PetTheDamnCat{}
+		catGame.Init(assets)
+		return tdcgame.NewGameFrameworkWithPlayer(assets, catGame, scoreKeeper, gameName)
 	default:
 		panic(fmt.Sprintf("Unknown game: %s", gameName))
 	}
@@ -138,7 +159,7 @@ func init() {
 		color: color.RGBA{180, 50, 220, 255},
 		key:   ebiten.KeyB,
 		newScene: func() Scene {
-			return &GameRunnerScene{runner: createGameFramework("bounce")}
+			return &GameRunnerScene{runner: createGameFramework("bounce"), gameName: "bounce", spaceTimer: -1}
 		},
 	})
 	wheelGames = append(wheelGames, gameEntry{
@@ -147,6 +168,14 @@ func init() {
 		key:   ebiten.KeyF,
 		newScene: func() Scene {
 			return &GameRunnerScene{runner: createGameFramework("flappy-guy"), gameName: "flappy-guy", spaceTimer: -1}
+		},
+	})
+	wheelGames = append(wheelGames, gameEntry{
+		name:  "Pet the Damn Cat!",
+		color: color.RGBA{255, 140, 60, 255},
+		key: ebiten.KeyP,
+		newScene: func() Scene {
+			return &GameRunnerScene{runner: createGameFramework("petthedamncat"), gameName: "petthedamncat", spaceTimer: -1}
 		},
 	})
 }

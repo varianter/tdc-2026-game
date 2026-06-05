@@ -24,6 +24,7 @@ const (
 	GroundDrawOffset = 6.0
 
 	MaxRunTime = 120
+	GameEnd    = 1200 // default end-flag X for games that don't implement TdcGameEndX
 )
 
 // GameRunner interface with helpers to make it easier to make a game
@@ -40,6 +41,7 @@ type GameRunner struct {
 	gameName          string
 	runtime           float64
 	started           bool
+	viewport          *ebiten.Image // fixed-res game canvas; scaled to fill screen each frame
 }
 
 func NewGameFrameworkWithPlayer(embed embed.FS, game TdcGameWithPlayer, scoreKeeper *ScoreKeeper, gameName string) *GameRunner {
@@ -146,59 +148,26 @@ func (g *GameRunner) Update() error {
 }
 
 func (g *GameRunner) Draw(screen *ebiten.Image) {
+	// scale: how many device pixels correspond to one game pixel
+	scale := float64(screen.Bounds().Dx()) / ScreenW
+
 	if cd, ok := g.game.(GameWithCustomDraw); ok {
 		cd.CustomDraw(screen)
 	} else {
-		g.defaultDraw(screen)
+
+	// ── Render game world into a fixed-resolution viewport ─────────────────
+	if g.viewport == nil {
+		g.viewport = ebiten.NewImage(ScreenW, ScreenH)
 	}
+	vp := g.viewport
+	vp.Fill(color.RGBA{30, 30, 30, 255})
 
-	if !g.started {
-		const pad = 12
-		lineY := ScreenH/2 - 6
-		lineH := 14
+	c := &Canvas{screen: vp}
+	c.Rect(0, 0, float32(ScreenW), float32(ScreenH), color.RGBA{135, 206, 235, 255}) // sky
 
-		bgX := float32(ScreenW/2) - 120
-		bgY := float32(lineY - pad)
-		bgW := float32(240)
-		bgH := float32(lineH + pad*2)
-
-		vector.FillRect(screen, bgX, bgY, bgW, bgH, color.RGBA{40, 40, 40, 200}, false)
-		WriteCentered(screen, "Press SPACE to start", lineY, lineH)
+	if gb, ok := g.game.(TdcGameWithBackground); ok {
+		gb.DrawBackground(vp, g.camera.x, g.camera.y)
 	}
-
-	if g.game.GetGameState() == GameOver {
-		const pad = 12
-		line1Y := ScreenH/2 - 36
-		line2Y := ScreenH/2 - 12
-		line3Y := ScreenH/2 + 12
-		line4Y := ScreenH/2 + 28
-		lineSmH := 10 // font size of small lines
-
-		bgX := float32(ScreenW/2) - 150
-		bgY := float32(line1Y - pad)
-		bgW := float32(300)
-		bgH := float32(line4Y+lineSmH+pad) - bgY
-
-		vector.FillRect(screen, bgX, bgY, bgW, bgH, color.RGBA{40, 40, 40, 200}, false)
-
-		WriteCentered(screen, "GAME OVER", line1Y, 16)
-		WriteCentered(screen, fmt.Sprintf("Score: %d", g.currentScore), line2Y, 16)
-		WriteCentered(screen, "Press button to return to the game wheel", line3Y, lineSmH)
-		WriteCentered(screen, "Double press button to replay the same game", line4Y, lineSmH)
-	} else {
-		Write(screen, fmt.Sprintf("Score: %d.    Time left: %.1fs", g.game.GetCurrentScore(), MaxRunTime-g.runtime), 5, 5, 8)
-	}
-}
-
-func (g *GameRunner) defaultDraw(screen *ebiten.Image) {
-	screen.Fill(color.RGBA{30, 30, 30, 255})
-
-	c := &Canvas{
-		screen: screen,
-	}
-	w, h := screen.Bounds().Dx(), screen.Bounds().Dy()
-
-	c.Rect(0, 0, float32(w), float32(h), color.RGBA{135, 206, 235, 255}) // sky is light blue, should be replaced with some background
 
 	if _, ok := g.game.(TdcGameWithPlayer); ok {
 		c.TilingGround(g.assets.Sprites["ground"], g.camera.x, g.camera.y, 5000)
@@ -217,6 +186,64 @@ func (g *GameRunner) defaultDraw(screen *ebiten.Image) {
 				g.RectXY(c, float32(gObj.s.P.X), float32(gObj.s.P.Y), float32(gObj.s.W), float32(gObj.s.H), gObj.Color())
 			}
 		}
+		endX := float64(GameEnd)
+		if ge, ok := g.game.(TdcGameEndX); ok {
+			endX = ge.EndX()
+		}
+		g.RectXY(c, float32(endX+4), float32(0), float32(3), float32(64), color.RGBA{30, 31, 30, 255})
+		g.RectXY(c, float32(endX+4), float32(64), float32(30), float32(20), color.RGBA{255, 56, 147, 255})
+	}
+
+	if gd, ok := g.game.(TdcGameWithDraw); ok {
+		gd.Draw(vp, g.camera.x, g.camera.y)
+	}
+
+	// ── Scale viewport to fill screen (nearest-neighbour keeps pixel art sharp) ──
+	vpOp := &ebiten.DrawImageOptions{}
+	vpOp.GeoM.Scale(scale, scale)
+	vpOp.Filter = ebiten.FilterNearest
+	screen.DrawImage(vp, vpOp)
+
+	// ── Game overlay (crisp text drawn by the game itself) ──────────────────
+	if god, ok := g.game.(TdcGameWithOverlayDraw); ok {
+		god.DrawOverlay(screen, scale, g.camera.x, g.camera.y)
+	}
+	} // end CustomDraw else
+
+	s := scale
+
+	if !g.started {
+		const pad = 12
+		lineY := int(float64(ScreenH/2-6) * s)
+		lineH := int(14 * s)
+		bgX := float32(float64(ScreenW/2)*s - 120*s)
+		bgY := float32(float64(lineY) - float64(pad)*s)
+		bgW := float32(240 * s)
+		bgH := float32(float64(lineH+pad*2) * s)
+		vector.FillRect(screen, bgX, bgY, bgW, bgH, color.RGBA{40, 40, 40, 200}, false)
+		WriteCentered(screen, "Press SPACE to start", lineY, lineH)
+	}
+
+	if g.game.GetGameState() == GameOver {
+		const pad = 12
+		line1Y := int(float64(ScreenH/2-36) * s)
+		line2Y := int(float64(ScreenH/2-12) * s)
+		line3Y := int(float64(ScreenH/2+12) * s)
+		line4Y := int(float64(ScreenH/2+28) * s)
+		lineSmH := int(10 * s)
+
+		bgX := float32(float64(ScreenW/2)*s - 150*s)
+		bgY := float32(float64(line1Y) - float64(pad)*s)
+		bgW := float32(300 * s)
+		bgH := float32(line4Y+lineSmH) + float32(pad)*float32(s) - bgY
+
+		vector.FillRect(screen, bgX, bgY, bgW, bgH, color.RGBA{40, 40, 40, 200}, false)
+		WriteCentered(screen, "GAME OVER", line1Y, int(16*s))
+		WriteCentered(screen, fmt.Sprintf("Score: %d", g.currentScore), line2Y, int(16*s))
+		WriteCentered(screen, "Press button to return to the game wheel", line3Y, lineSmH)
+		WriteCentered(screen, "Double press button to replay the same game", line4Y, lineSmH)
+	} else {
+		Write(screen, fmt.Sprintf("Score: %d.    Time left: %.1fs", g.game.GetCurrentScore(), MaxRunTime-g.runtime), int(5*s), int(5*s), int(8*s))
 	}
 }
 
@@ -252,7 +279,7 @@ func Write(s *ebiten.Image, msg string, x, y int, size int) {
 
 func WriteCentered(s *ebiten.Image, msg string, y int, size int) {
 	op := &text.DrawOptions{}
-	op.GeoM.Translate(float64(ScreenW/2), float64(y))
+	op.GeoM.Translate(float64(s.Bounds().Dx()/2), float64(y))
 	op.PrimaryAlign = text.AlignCenter
 	op.ColorScale.ScaleWithColor(color.White)
 	text.Draw(s, msg, &text.GoTextFace{Source: mplusFaceSource, Size: float64(size)}, op)

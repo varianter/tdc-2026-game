@@ -38,6 +38,7 @@ type LauncherScene struct {
 	winner    int
 	timer     float64
 	fadeAlpha float64
+	viewport  *ebiten.Image
 }
 
 func NewLauncherScene() *LauncherScene {
@@ -101,7 +102,12 @@ func (l *LauncherScene) calcWinner() int {
 }
 
 func (l *LauncherScene) Draw(screen *ebiten.Image) {
-	screen.Fill(color.RGBA{15, 15, 30, 255})
+	scale := float64(screen.Bounds().Dx()) / ScreenW
+	if l.viewport == nil {
+		l.viewport = ebiten.NewImage(ScreenW, ScreenH)
+	}
+	vp := l.viewport
+	vp.Fill(color.RGBA{15, 15, 30, 255})
 
 	cx := float32(ScreenW) / 4.0
 	cy := float32(ScreenH)/2.0 + 10
@@ -121,7 +127,7 @@ func (l *LauncherScene) Draw(screen *ebiten.Image) {
 				clr = dimColor(clr, 0.3)
 			}
 		}
-		drawPieSlice(screen, cx, cy, r, start, end, clr)
+		drawPieSlice(vp, cx, cy, r, start, end, clr)
 	}
 
 	// Divider lines between slices
@@ -129,34 +135,34 @@ func (l *LauncherScene) Draw(screen *ebiten.Image) {
 		a := l.angle + float64(i)*sliceAngle
 		ex := cx + float32(math.Cos(a))*r
 		ey := cy + float32(math.Sin(a))*r
-		vector.StrokeLine(screen, cx, cy, ex, ey, 1.5, color.RGBA{10, 10, 20, 220}, true)
+		vector.StrokeLine(vp, cx, cy, ex, ey, 1.5, color.RGBA{10, 10, 20, 220}, true)
 	}
 
-	vector.StrokeCircle(screen, cx, cy, r, 2.0, color.RGBA{200, 200, 220, 255}, true)
-	vector.FillCircle(screen, cx, cy, 5, color.RGBA{220, 220, 240, 255}, true)
+	vector.StrokeCircle(vp, cx, cy, r, 2.0, color.RGBA{200, 200, 220, 255}, true)
+	vector.FillCircle(vp, cx, cy, 5, color.RGBA{220, 220, 240, 255}, true)
 
 	// Pointer arrow at top of wheel
-	drawWheelPointer(screen, cx, cy-r)
+	drawWheelPointer(vp, cx, cy-r)
 
 	// Title
 	title := "TDC 2026 GAME LAUNCHER"
-	ebitenutil.DebugPrintAt(screen, title, (ScreenW-len(title)*6)/2, 4)
+	ebitenutil.DebugPrintAt(vp, title, (ScreenW-len(title)*6)/2, 4)
 
 	// Game list (right half)
 	listX := int(ScreenW/2) + 8
-	ebitenutil.DebugPrintAt(screen, "GAMES:", listX, 20)
+	ebitenutil.DebugPrintAt(vp, "GAMES:", listX, 20)
 	for i, game := range wheelGames {
 		y := 36 + i*15
 		isWinner := i == l.winner && (l.state == launcherResult || l.state == launcherFading)
 		if isWinner {
-			vector.FillRect(screen, float32(listX-2), float32(y-1), 125, 12, color.RGBA{255, 255, 200, 35}, false)
+			vector.FillRect(vp, float32(listX-2), float32(y-1), 125, 12, color.RGBA{255, 255, 200, 35}, false)
 		}
-		vector.FillRect(screen, float32(listX), float32(y+2), 7, 7, game.color, false)
+		vector.FillRect(vp, float32(listX), float32(y+2), 7, 7, game.color, false)
 		prefix := "  "
 		if isWinner {
 			prefix = "> "
 		}
-		ebitenutil.DebugPrintAt(screen, prefix+game.name, listX+9, y)
+		ebitenutil.DebugPrintAt(vp, prefix+game.name, listX+9, y)
 	}
 
 	// Status at bottom (centered under wheel)
@@ -172,13 +178,19 @@ func (l *LauncherScene) Draw(screen *ebiten.Image) {
 		status = "Launching " + wheelGames[l.winner].name + "..."
 	}
 	statusX := int(cx) - len(status)*3
-	ebitenutil.DebugPrintAt(screen, status, statusX, ScreenH-14)
+	ebitenutil.DebugPrintAt(vp, status, statusX, ScreenH-14)
 
 	// Fade-to-black overlay
 	if l.fadeAlpha > 0 {
 		alpha := uint8(math.Min(l.fadeAlpha, 255))
-		vector.FillRect(screen, 0, 0, float32(ScreenW), float32(ScreenH), color.RGBA{0, 0, 0, alpha}, false)
+		vector.FillRect(vp, 0, 0, float32(ScreenW), float32(ScreenH), color.RGBA{0, 0, 0, alpha}, false)
 	}
+
+	// Scale viewport to fill the full device-pixel screen
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Scale(scale, scale)
+	op.Filter = ebiten.FilterNearest
+	screen.DrawImage(vp, op)
 }
 
 func drawPieSlice(screen *ebiten.Image, cx, cy, r, startAngle, endAngle float32, clr color.RGBA) {
