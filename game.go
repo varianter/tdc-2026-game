@@ -149,7 +149,7 @@ func init() {
 		log.Fatal(err)
 	}
 
-	wheelGames = append(wheelGames, gameEntry{
+	launcherGames = append(launcherGames, gameEntry{
 		name:  "TDCRUNNER",
 		color: color.RGBA{220, 60, 60, 255},
 		key:   ebiten.KeyR,
@@ -157,7 +157,7 @@ func init() {
 			return &GameRunnerScene{runner: createGameFramework("tdcrunner"), gameName: "tdcrunner", spaceTimer: -1}
 		},
 	})
-	wheelGames = append(wheelGames, gameEntry{
+	launcherGames = append(launcherGames, gameEntry{
 		name:  "BOUNCE",
 		color: color.RGBA{180, 50, 220, 255},
 		key:   ebiten.KeyB,
@@ -165,7 +165,7 @@ func init() {
 			return &GameRunnerScene{runner: createGameFramework("bounce"), gameName: "bounce", spaceTimer: -1}
 		},
 	})
-	wheelGames = append(wheelGames, gameEntry{
+	launcherGames = append(launcherGames, gameEntry{
 		name:  "FLAPPY-GUY",
 		color: color.RGBA{60, 180, 220, 255},
 		key:   ebiten.KeyF,
@@ -173,7 +173,7 @@ func init() {
 			return &GameRunnerScene{runner: createGameFramework("flappy-guy"), gameName: "flappy-guy", spaceTimer: -1}
 		},
 	})
-	wheelGames = append(wheelGames, gameEntry{
+	launcherGames = append(launcherGames, gameEntry{
 		name:  "Pet the Damn Cat!",
 		color: color.RGBA{255, 140, 60, 255},
 		key:   ebiten.KeyP,
@@ -181,7 +181,7 @@ func init() {
 			return &GameRunnerScene{runner: createGameFramework("petthedamncat"), gameName: "petthedamncat", spaceTimer: -1}
 		},
 	})
-	wheelGames = append(wheelGames, gameEntry{
+	launcherGames = append(launcherGames, gameEntry{
 		name:  "V-CLICKER",
 		color: color.RGBA{255, 38, 98, 255},
 		key:   ebiten.KeyV,
