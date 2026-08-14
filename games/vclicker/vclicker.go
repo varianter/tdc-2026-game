@@ -1,16 +1,13 @@
 package vclicker
 
 import (
-	"bytes"
 	"fmt"
 	"image/color"
-	"log"
 	"math"
 	"math/rand"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -56,16 +53,6 @@ var particleColors = []color.RGBA{
 	{255, 60, 220, 255},
 	{60, 240, 240, 255},
 	{255, 160, 40, 255},
-}
-
-var fontSource *text.GoTextFaceSource
-
-func init() {
-	s, err := text.NewGoTextFaceSource(bytes.NewReader(fonts.MPlus1pRegular_ttf))
-	if err != nil {
-		log.Fatal(err)
-	}
-	fontSource = s
 }
 
 // VClicker implements TdcGameWithPlayer and GameWithCustomDraw.
@@ -230,7 +217,7 @@ func (v *VClicker) CustomDraw(screen *ebiten.Image) {
 	}
 
 	if btnPulse > 0 {
-		drawText(screen, "V", v.btnX*scale, (v.btnY-2)*scale, 24*btnPulse*scale,
+		tdcgame.WriteAt(screen, "V", v.btnX*scale, (v.btnY-2)*scale, 24*btnPulse*scale,
 			color.RGBA{230, 210, 255, 255}, text.AlignCenter, text.AlignCenter)
 	}
 }
@@ -313,33 +300,22 @@ func (v *VClicker) drawParticles(screen *ebiten.Image, scale float64) {
 	for _, p := range v.particles {
 		t := p.life / particleLifetime
 		size := (6.0 + 3.0*t) * scale
-		drawText(screen, p.label, p.x*scale, p.y*scale, size,
+		tdcgame.WriteAt(screen, p.label, p.x*scale, p.y*scale, size,
 			color.RGBA{p.clr.R, p.clr.G, p.clr.B, uint8(t * 220)},
 			text.AlignCenter, text.AlignCenter)
 	}
 }
 
-// drawText draws msg at device-pixel coordinates x,y with the given size,
-// color and alignment.
-func drawText(screen *ebiten.Image, msg string, x, y, size float64, clr color.Color, primary, secondary text.Align) {
-	op := &text.DrawOptions{}
-	op.GeoM.Translate(x, y)
-	op.PrimaryAlign = primary
-	op.SecondaryAlign = secondary
-	op.ColorScale.ScaleWithColor(clr)
-	text.Draw(screen, msg, &text.GoTextFace{Source: fontSource, Size: size}, op)
-}
-
 // writeCentered draws msg horizontally centered on the screen. y/size are in
 // viewport space and scaled to device pixels.
 func writeCentered(screen *ebiten.Image, msg string, y, size int, scale float64) {
-	drawText(screen, msg, float64(tdcgame.ScreenW)/2*scale, float64(y)*scale, float64(size)*scale,
+	tdcgame.WriteAt(screen, msg, float64(tdcgame.ScreenW)/2*scale, float64(y)*scale, float64(size)*scale,
 		color.White, text.AlignCenter, text.AlignStart)
 }
 
 // writeRight draws msg right-aligned at viewport-space x,y (scaled to device pixels).
 func writeRight(screen *ebiten.Image, msg string, x, y, size int, scale float64) {
-	drawText(screen, msg, float64(x)*scale, float64(y)*scale, float64(size)*scale,
+	tdcgame.WriteAt(screen, msg, float64(x)*scale, float64(y)*scale, float64(size)*scale,
 		color.White, text.AlignEnd, text.AlignStart)
 }
 

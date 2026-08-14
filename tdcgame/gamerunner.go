@@ -267,31 +267,31 @@ func zeroY(y, h float32) float32 {
 	return GroundY - h - y
 }
 
+// WriteAt draws msg at device-pixel coordinates x,y with the given size, color
+// and alignment, using the shared M+ font. It is the primitive that all other
+// Write* helpers delegate to, so every game renders text through one code path.
+func WriteAt(s *ebiten.Image, msg string, x, y, size float64, clr color.Color, primary, secondary text.Align) {
+	op := &text.DrawOptions{}
+	op.GeoM.Translate(x, y)
+	op.PrimaryAlign = primary
+	op.SecondaryAlign = secondary
+	op.ColorScale.ScaleWithColor(clr)
+	text.Draw(s, msg, &text.GoTextFace{Source: mplusFaceSource, Size: size}, op)
+}
+
+// Write draws left-aligned white text at x,y.
 func Write(s *ebiten.Image, msg string, x, y int, size int) {
-	op := &text.DrawOptions{}
-	op.GeoM.Translate(float64(x), float64(y))
-	op.ColorScale.ScaleWithColor(color.White)
-	text.Draw(s, msg, &text.GoTextFace{
-		Source: mplusFaceSource,
-		Size:   float64(size),
-	}, op)
+	WriteAt(s, msg, float64(x), float64(y), float64(size), color.White, text.AlignStart, text.AlignStart)
 }
 
+// WriteCentered draws white text horizontally centered on the image width.
 func WriteCentered(s *ebiten.Image, msg string, y int, size int) {
-	op := &text.DrawOptions{}
-	op.GeoM.Translate(float64(s.Bounds().Dx()/2), float64(y))
-	op.PrimaryAlign = text.AlignCenter
-	op.ColorScale.ScaleWithColor(color.White)
-	text.Draw(s, msg, &text.GoTextFace{Source: mplusFaceSource, Size: float64(size)}, op)
+	WriteAt(s, msg, float64(s.Bounds().Dx()/2), float64(y), float64(size), color.White, text.AlignCenter, text.AlignStart)
 }
 
-// WriteCenteredAt draws msg horizontally centered on x (all in device pixels).
+// WriteCenteredAt draws white text horizontally centered on x (all in device pixels).
 func WriteCenteredAt(s *ebiten.Image, msg string, x, y, size int) {
-	op := &text.DrawOptions{}
-	op.GeoM.Translate(float64(x), float64(y))
-	op.PrimaryAlign = text.AlignCenter
-	op.ColorScale.ScaleWithColor(color.White)
-	text.Draw(s, msg, &text.GoTextFace{Source: mplusFaceSource, Size: float64(size)}, op)
+	WriteAt(s, msg, float64(x), float64(y), float64(size), color.White, text.AlignCenter, text.AlignStart)
 }
 
 func init() {

@@ -2,7 +2,6 @@
 package petthedamncat
 
 import (
-	"bytes"
 	"embed"
 	"fmt"
 	"image/color"
@@ -13,7 +12,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"variant.dev/tdcgame/tdcgame"
@@ -129,7 +127,6 @@ type PetTheDamnCat struct {
 	currSpeed     float64
 	timeLeft      float64
 	catSheets    [3]*tdcgame.SpriteSheet
-	font         *text.GoTextFaceSource
 	musicPlayer  *audio.Player // loops radioactive.wav while a big cat is active
 }
 
@@ -172,12 +169,6 @@ func (p *PetTheDamnCat) Init(assets embed.FS) {
 
 	initAudio(assets)
 	p.musicPlayer = newMusicPlayer(assets)
-
-	s, err := text.NewGoTextFaceSource(bytes.NewReader(fonts.MPlus1pRegular_ttf))
-	if err != nil {
-		log.Fatal(err)
-	}
-	p.font = s
 }
 
 func (p *PetTheDamnCat) GetGameObjects() []tdcgame.GameObject { return nil }
@@ -799,10 +790,7 @@ func (p *PetTheDamnCat) drawSpeedBar(screen *ebiten.Image, progress float64) {
 
 
 func (p *PetTheDamnCat) writeText(screen *ebiten.Image, msg string, x, y float64, size int, clr color.Color) {
-	op := &text.DrawOptions{}
-	op.GeoM.Translate(x, y)
-	op.ColorScale.ScaleWithColor(clr)
-	text.Draw(screen, msg, &text.GoTextFace{Source: p.font, Size: float64(size)}, op)
+	tdcgame.WriteAt(screen, msg, x, y, float64(size), clr, text.AlignStart, text.AlignStart)
 }
 
 // DrawOverlay draws text elements at full device-pixel resolution so they
