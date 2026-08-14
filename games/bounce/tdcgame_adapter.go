@@ -44,7 +44,7 @@ func (b *Bounce) GetCurrentScore() int {
 
 func (b *Bounce) GetPlayerUpdateFunc() tdcgame.PlayerUpdate {
 	return func(buttonpressed bool, dt float64, level tdcgame.Level, player *tdcgame.MovingSquare) {
-		spaceJustPressed := inpututil.IsKeyJustPressed(ebiten.KeySpace)
+		spaceJustPressed := inpututil.IsKeyJustPressed(ebiten.KeyEnter)
 		b.game.Update(dt, buttonpressed, spaceJustPressed)
 	}
 }

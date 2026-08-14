@@ -6,9 +6,9 @@ import (
 	"math/rand"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"variant.dev/tdcgame/tdcgame"
 )
 
 type launcherState int
@@ -60,7 +60,7 @@ func (l *LauncherScene) Update(dt float64) (Scene, error) {
 
 	switch l.state {
 	case launcherIdle:
-		if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			l.velocity = 15.0 + rand.Float64()*10.0
 			l.state = launcherSpinning
 		}
@@ -75,7 +75,7 @@ func (l *LauncherScene) Update(dt float64) (Scene, error) {
 		}
 	case launcherResult:
 		l.timer -= dt
-		if l.timer <= 0 || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		if l.timer <= 0 || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			l.state = launcherFading
 		}
 	case launcherFading:
@@ -144,13 +144,8 @@ func (l *LauncherScene) Draw(screen *ebiten.Image) {
 	// Pointer arrow at top of wheel
 	drawWheelPointer(vp, cx, cy-r)
 
-	// Title
-	title := "TDC 2026 GAME LAUNCHER"
-	ebitenutil.DebugPrintAt(vp, title, (ScreenW-len(title)*6)/2, 4)
-
-	// Game list (right half)
+	// Game list highlight rects + color squares (text drawn later at device res)
 	listX := int(ScreenW/2) + 8
-	ebitenutil.DebugPrintAt(vp, "GAMES:", listX, 20)
 	for i, game := range wheelGames {
 		y := 36 + i*15
 		isWinner := i == l.winner && (l.state == launcherResult || l.state == launcherFading)
@@ -158,32 +153,6 @@ func (l *LauncherScene) Draw(screen *ebiten.Image) {
 			vector.FillRect(vp, float32(listX-2), float32(y-1), 125, 12, color.RGBA{255, 255, 200, 35}, false)
 		}
 		vector.FillRect(vp, float32(listX), float32(y+2), 7, 7, game.color, false)
-		prefix := "  "
-		if isWinner {
-			prefix = "> "
-		}
-		ebitenutil.DebugPrintAt(vp, prefix+game.name, listX+9, y)
-	}
-
-	// Status at bottom (centered under wheel)
-	var status string
-	switch l.state {
-	case launcherIdle:
-		status = "SPACE to spin"
-	case launcherSpinning:
-		status = "Spinning..."
-	case launcherResult:
-		status = wheelGames[l.winner].name + "! [SPACE]"
-	case launcherFading:
-		status = "Launching " + wheelGames[l.winner].name + "..."
-	}
-	statusX := int(cx) - len(status)*3
-	ebitenutil.DebugPrintAt(vp, status, statusX, ScreenH-14)
-
-	// Fade-to-black overlay
-	if l.fadeAlpha > 0 {
-		alpha := uint8(math.Min(l.fadeAlpha, 255))
-		vector.FillRect(vp, 0, 0, float32(ScreenW), float32(ScreenH), color.RGBA{0, 0, 0, alpha}, false)
 	}
 
 	// Scale viewport to fill the full device-pixel screen
@@ -191,6 +160,40 @@ func (l *LauncherScene) Draw(screen *ebiten.Image) {
 	op.GeoM.Scale(scale, scale)
 	op.Filter = ebiten.FilterNearest
 	screen.DrawImage(vp, op)
+
+	// ── Text drawn at device resolution so it stays crisp ──────────────────
+	tdcgame.WriteCentered(screen, "TDC 2026 GAME LAUNCHER", int(4*scale), int(10*scale))
+	tdcgame.Write(screen, "GAMES:", int(float64(listX)*scale), int(20*scale), int(8*scale))
+	for i, game := range wheelGames {
+		y := 36 + i*15
+		isWinner := i == l.winner && (l.state == launcherResult || l.state == launcherFading)
+		prefix := "  "
+		if isWinner {
+			prefix = "> "
+		}
+		tdcgame.Write(screen, prefix+game.name, int(float64(listX+9)*scale), int(float64(y)*scale), int(8*scale))
+	}
+
+	// Status at bottom (centered under wheel)
+	var status string
+	switch l.state {
+	case launcherIdle:
+		status = "THE BIG RED BUTTON to spin"
+	case launcherSpinning:
+		status = "Spinning..."
+	case launcherResult:
+		status = wheelGames[l.winner].name + "! [SPACE]"
+	case launcherFading:
+		status = "Launching " + wheelGames[l.winner].name + "..."
+	}
+	tdcgame.WriteCenteredAt(screen, status, int(float64(cx)*scale), int(float64(ScreenH-14)*scale), int(8*scale))
+
+	// Fade-to-black overlay (covers text too so the whole launcher fades)
+	if l.fadeAlpha > 0 {
+		alpha := uint8(math.Min(l.fadeAlpha, 255))
+		b := screen.Bounds()
+		vector.FillRect(screen, 0, 0, float32(b.Dx()), float32(b.Dy()), color.RGBA{0, 0, 0, alpha}, false)
+	}
 }
 
 func drawPieSlice(screen *ebiten.Image, cx, cy, r, startAngle, endAngle float32, clr color.RGBA) {

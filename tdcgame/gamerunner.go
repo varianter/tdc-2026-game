@@ -109,7 +109,7 @@ func (g *GameRunner) Update() error {
 		if g.params.ShouldCameraFollowPlayer {
 			g.camera.Follow(g.player, ScreenH, ScreenW)
 		}
-		if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			g.started = true
 		}
 		return nil
@@ -153,7 +153,8 @@ func (g *GameRunner) Draw(screen *ebiten.Image) {
 
 	if cd, ok := g.game.(GameWithCustomDraw); ok {
 		cd.CustomDraw(screen)
-	} else {
+		return
+	}
 
 	// ── Render game world into a fixed-resolution viewport ─────────────────
 	if g.viewport == nil {
@@ -208,7 +209,6 @@ func (g *GameRunner) Draw(screen *ebiten.Image) {
 	if god, ok := g.game.(TdcGameWithOverlayDraw); ok {
 		god.DrawOverlay(screen, scale, g.camera.x, g.camera.y)
 	}
-	} // end CustomDraw else
 
 	s := scale
 
@@ -221,7 +221,7 @@ func (g *GameRunner) Draw(screen *ebiten.Image) {
 		bgW := float32(240 * s)
 		bgH := float32(float64(lineH+pad*2) * s)
 		vector.FillRect(screen, bgX, bgY, bgW, bgH, color.RGBA{40, 40, 40, 200}, false)
-		WriteCentered(screen, "Press SPACE to start", lineY, lineH)
+		WriteCentered(screen, "Press the big red button to start", lineY, lineH)
 	}
 
 	if g.game.GetGameState() == GameOver {
@@ -280,6 +280,15 @@ func Write(s *ebiten.Image, msg string, x, y int, size int) {
 func WriteCentered(s *ebiten.Image, msg string, y int, size int) {
 	op := &text.DrawOptions{}
 	op.GeoM.Translate(float64(s.Bounds().Dx()/2), float64(y))
+	op.PrimaryAlign = text.AlignCenter
+	op.ColorScale.ScaleWithColor(color.White)
+	text.Draw(s, msg, &text.GoTextFace{Source: mplusFaceSource, Size: float64(size)}, op)
+}
+
+// WriteCenteredAt draws msg horizontally centered on x (all in device pixels).
+func WriteCenteredAt(s *ebiten.Image, msg string, x, y, size int) {
+	op := &text.DrawOptions{}
+	op.GeoM.Translate(float64(x), float64(y))
 	op.PrimaryAlign = text.AlignCenter
 	op.ColorScale.ScaleWithColor(color.White)
 	text.Draw(s, msg, &text.GoTextFace{Source: mplusFaceSource, Size: float64(size)}, op)
