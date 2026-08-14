@@ -13,6 +13,7 @@ import (
 	"variant.dev/tdcgame/games/flappyguy"
 	"variant.dev/tdcgame/games/petthedamncat"
 	"variant.dev/tdcgame/games/tdcrunner"
+	"variant.dev/tdcgame/games/vclicker"
 	"variant.dev/tdcgame/tdcgame"
 )
 
@@ -96,7 +97,7 @@ func (s *GameRunnerScene) Update(dt float64) (Scene, error) {
 	}
 
 	if s.runner.State() == tdcgame.GameOver {
-		if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			if s.spaceTimer >= 0 {
 				// Second press within window: restart
 				return &GameRunnerScene{runner: createGameFramework(s.gameName), gameName: s.gameName, spaceTimer: -1}, nil
@@ -128,6 +129,8 @@ func createGameFramework(gameName string) *tdcgame.GameRunner {
 		return tdcgame.NewGameFrameworkWithPlayer(assets, &tdcrunner.TdcRunner{}, scoreKeeper, gameName)
 	case "bounce":
 		return tdcgame.NewGameFrameworkWithPlayer(assets, bounce.NewBounce(assets), scoreKeeper, gameName)
+	case "vclicker":
+		return tdcgame.NewGameFrameworkWithPlayer(assets, vclicker.NewVClickerScene(), scoreKeeper, gameName)
 	case "flappy-guy":
 		return tdcgame.NewGameFrameworkWithPlayer(assets, flappyguy.New(), scoreKeeper, gameName)
 	case "petthedamncat":
@@ -173,9 +176,17 @@ func init() {
 	wheelGames = append(wheelGames, gameEntry{
 		name:  "Pet the Damn Cat!",
 		color: color.RGBA{255, 140, 60, 255},
-		key: ebiten.KeyP,
+		key:   ebiten.KeyP,
 		newScene: func() Scene {
 			return &GameRunnerScene{runner: createGameFramework("petthedamncat"), gameName: "petthedamncat", spaceTimer: -1}
+		},
+	})
+	wheelGames = append(wheelGames, gameEntry{
+		name:  "V-CLICKER",
+		color: color.RGBA{255, 38, 98, 255},
+		key:   ebiten.KeyV,
+		newScene: func() Scene {
+			return &GameRunnerScene{runner: createGameFramework("vclicker"), gameName: "vclicker", spaceTimer: -1}
 		},
 	})
 }

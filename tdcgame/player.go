@@ -10,7 +10,7 @@ type Player struct {
 	walkLeftAnim     *Animation
 	idleRightAnim    *Animation
 	idleLeftAnim     *Animation
-	flyAnim         *Animation
+	flyAnim          *Animation
 	currentAnimation *Animation
 	vx, vy           float64
 	x, y             float64
@@ -28,15 +28,15 @@ type Player struct {
 
 func Newplayer(sheet *SpriteSheet, params *GameParameters) *Player {
 	player := &Player{
-		sheet: sheet,
+		sheet:         sheet,
 		walkRightAnim: NewAnimation(sheet, 0, 8, params.AnimWalkFPS),
-		walkLeftAnim: NewAnimation(sheet, 8, 8, params.AnimWalkFPS),
+		walkLeftAnim:  NewAnimation(sheet, 8, 8, params.AnimWalkFPS),
 		idleRightAnim: NewAnimation(sheet, 15, 1, 11),
-		idleLeftAnim: NewAnimation(sheet, 15, 1, 11),
+		idleLeftAnim:  NewAnimation(sheet, 15, 1, 11),
 		flyAnim: &Animation{
-			Sheet: sheet,
-			Frames: []int{3,6,7},
-			FPS: 20,
+			Sheet:  sheet,
+			Frames: []int{3, 6, 7},
+			FPS:    20,
 		},
 		x: 0, y: params.StartY,
 		h: 64, w: 64,
@@ -97,12 +97,12 @@ func (p *Player) Update(dt float64, level Level, tdcgamePlayerUpdate PlayerUpdat
 	}
 
 	pSquare := p.ToCollisionSquare()
-	tdcgamePlayerUpdate(ebiten.IsKeyPressed(ebiten.KeySpace), dt, level, &pSquare)
+	tdcgamePlayerUpdate(ebiten.IsKeyPressed(ebiten.KeyEnter), dt, level, &pSquare)
 
 	nextX := pSquare.P.X - p.collisionOffsetX
 
 	// Update animation
-	if(p.isFlying) {
+	if p.isFlying {
 		p.switchAnim(p.flyAnim)
 	} else {
 		if nextX > p.x {
