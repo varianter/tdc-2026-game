@@ -215,10 +215,10 @@ func (g *GameRunner) Draw(screen *ebiten.Image) {
 	if !g.started {
 		const pad = 12
 		lineY := int(float64(ScreenH/2-6) * s)
-		lineH := int(14 * s)
-		bgX := float32(float64(ScreenW/2)*s - 120*s)
+		lineH := int(10 * s)
+		bgX := float32(float64(ScreenW/2)*s - 180*s)
 		bgY := float32(float64(lineY) - float64(pad)*s)
-		bgW := float32(240 * s)
+		bgW := float32(360 * s)
 		bgH := float32(float64(lineH+pad*2) * s)
 		vector.FillRect(screen, bgX, bgY, bgW, bgH, color.RGBA{40, 40, 40, 200}, false)
 		WriteCentered(screen, "Press the big red button to start", lineY, lineH)
@@ -230,11 +230,11 @@ func (g *GameRunner) Draw(screen *ebiten.Image) {
 		line2Y := int(float64(ScreenH/2-12) * s)
 		line3Y := int(float64(ScreenH/2+12) * s)
 		line4Y := int(float64(ScreenH/2+28) * s)
-		lineSmH := int(10 * s)
+		lineSmH := int(8 * s)
 
-		bgX := float32(float64(ScreenW/2)*s - 150*s)
+		bgX := float32(float64(ScreenW/2)*s - 180*s)
 		bgY := float32(float64(line1Y) - float64(pad)*s)
-		bgW := float32(300 * s)
+		bgW := float32(360 * s)
 		bgH := float32(line4Y+lineSmH) + float32(pad)*float32(s) - bgY
 
 		vector.FillRect(screen, bgX, bgY, bgW, bgH, color.RGBA{40, 40, 40, 200}, false)
@@ -303,7 +303,7 @@ func MeasureWidth(msg string, size float64) float64 {
 }
 
 func init() {
-	s, err := text.NewGoTextFaceSource(bytes.NewReader(fonts.MPlus1pRegular_ttf))
+	s, err := text.NewGoTextFaceSource(bytes.NewReader(fonts.PressStart2P_ttf))
 	if err != nil {
 		log.Fatal(err)
 	}
