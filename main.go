@@ -14,7 +14,7 @@ func main() {
 
 	var initialScene Scene = NewLauncherScene()
 	if *gameFlag != "" {
-		for _, entry := range wheelGames {
+		for _, entry := range launcherGames {
 			if strings.EqualFold(entry.name, *gameFlag) {
 				initialScene = entry.newScene()
 				break

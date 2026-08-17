@@ -294,6 +294,14 @@ func WriteCenteredAt(s *ebiten.Image, msg string, x, y, size int) {
 	WriteAt(s, msg, float64(x), float64(y), float64(size), color.White, text.AlignCenter, text.AlignStart)
 }
 
+// MeasureWidth returns the rendered width of msg at the given size using the
+// shared M+ font, for laying out elements next to text without hardcoding
+// widths (e.g. placing a divider after a label of unknown length).
+func MeasureWidth(msg string, size float64) float64 {
+	w, _ := text.Measure(msg, &text.GoTextFace{Source: mplusFaceSource, Size: size}, size)
+	return w
+}
+
 func init() {
 	s, err := text.NewGoTextFaceSource(bytes.NewReader(fonts.MPlus1pRegular_ttf))
 	if err != nil {

@@ -149,42 +149,47 @@ func init() {
 		log.Fatal(err)
 	}
 
-	wheelGames = append(wheelGames, gameEntry{
-		name:  "TDCRUNNER",
-		color: color.RGBA{220, 60, 60, 255},
-		key:   ebiten.KeyR,
+	launcherGames = append(launcherGames, gameEntry{
+		name:     "TDCRUNNER",
+		gameName: "tdcrunner",
+		color:    color.RGBA{142, 32, 32, 255}, // #8E2020
+		key:      ebiten.KeyR,
 		newScene: func() Scene {
 			return &GameRunnerScene{runner: createGameFramework("tdcrunner"), gameName: "tdcrunner", spaceTimer: -1}
 		},
 	})
-	wheelGames = append(wheelGames, gameEntry{
-		name:  "BOUNCE",
-		color: color.RGBA{180, 50, 220, 255},
-		key:   ebiten.KeyB,
+	launcherGames = append(launcherGames, gameEntry{
+		name:     "BOUNCE",
+		gameName: "bounce",
+		color:    color.RGBA{108, 42, 130, 255}, // #6C2A82
+		key:      ebiten.KeyB,
 		newScene: func() Scene {
 			return &GameRunnerScene{runner: createGameFramework("bounce"), gameName: "bounce", spaceTimer: -1}
 		},
 	})
-	wheelGames = append(wheelGames, gameEntry{
-		name:  "FLAPPY-GUY",
-		color: color.RGBA{60, 180, 220, 255},
-		key:   ebiten.KeyF,
+	launcherGames = append(launcherGames, gameEntry{
+		name:     "FLAPPY-GUY",
+		gameName: "flappy-guy",
+		color:    color.RGBA{60, 180, 220, 255},
+		key:      ebiten.KeyF,
 		newScene: func() Scene {
 			return &GameRunnerScene{runner: createGameFramework("flappy-guy"), gameName: "flappy-guy", spaceTimer: -1}
 		},
 	})
-	wheelGames = append(wheelGames, gameEntry{
-		name:  "Pet the Damn Cat!",
-		color: color.RGBA{255, 140, 60, 255},
-		key:   ebiten.KeyP,
+	launcherGames = append(launcherGames, gameEntry{
+		name:     "Pet the Damn Cat!",
+		gameName: "petthedamncat",
+		color:    color.RGBA{160, 82, 28, 255}, // #A0521C
+		key:      ebiten.KeyP,
 		newScene: func() Scene {
 			return &GameRunnerScene{runner: createGameFramework("petthedamncat"), gameName: "petthedamncat", spaceTimer: -1}
 		},
 	})
-	wheelGames = append(wheelGames, gameEntry{
-		name:  "V-CLICKER",
-		color: color.RGBA{255, 38, 98, 255},
-		key:   ebiten.KeyV,
+	launcherGames = append(launcherGames, gameEntry{
+		name:     "V-CLICKER",
+		gameName: "vclicker",
+		color:    color.RGBA{163, 24, 64, 255}, // #A31840
+		key:      ebiten.KeyV,
 		newScene: func() Scene {
 			return &GameRunnerScene{runner: createGameFramework("vclicker"), gameName: "vclicker", spaceTimer: -1}
 		},
