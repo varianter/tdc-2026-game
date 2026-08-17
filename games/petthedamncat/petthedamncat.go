@@ -822,6 +822,6 @@ func (p *PetTheDamnCat) DrawOverlay(screen *ebiten.Image, scale, cameraX, camera
 	// Speed multiplier label next to the speed bar.
 	const barW, barH = 60.0, 6.0
 	const barX, barY = float64(tdcgame.ScreenW-barW-8), float64(8)
-	p.writeText(screen, fmt.Sprintf("×%.1f", 1+(maxSpeed/minSpeed-1)*p.progress),
+	p.writeText(screen, fmt.Sprintf("x%.1f", 1+(maxSpeed/minSpeed-1)*p.progress),
 		(barX-26)*scale, (barY-1)*scale, int(8*scale), color.RGBA{200, 200, 200, 200})
 }

@@ -655,7 +655,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	sz := int(8 * scale)
 	tdcgame.Write(screen, fmt.Sprintf("SCORE: %d", g.score), int(8*scale), int(float64(hudY)*scale), sz)
 	speedPct := int((g.scrollSpeed - baseScrollSpeed) / (maxScrollSpeed - baseScrollSpeed) * 100)
-	tdcgame.Write(screen, fmt.Sprintf("SPEED: %d%%", speedPct), int(float64(screenW-72)*scale), int(float64(hudY)*scale), sz)
+	tdcgame.Write(screen, fmt.Sprintf("SPEED: %d%%", speedPct), int(float64(screenW-94)*scale), int(float64(hudY)*scale), sz)
 
 	if g.shieldTimer > 0 {
 		tdcgame.WriteCenteredAt(screen, fmt.Sprintf("SHIELD: %.1fs", g.shieldTimer), int(float64(screenW/2)*scale), int(float64(hudY)*scale), sz)

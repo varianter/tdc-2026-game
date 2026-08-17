@@ -213,7 +213,7 @@ func (v *VClicker) CustomDraw(screen *ebiten.Image) {
 		writeCentered(screen, "TIME'S UP!", tdcgame.ScreenH/2-34, 16, scale)
 		writeCentered(screen, fmt.Sprintf("SCORE: %d", v.score), tdcgame.ScreenH/2-10, 14, scale)
 		writeCentered(screen, fmt.Sprintf("%.1f CLICKS/SEC", cps), tdcgame.ScreenH/2+12, 10, scale)
-		writeCentered(screen, "PRESS THE BIG RED BUTTON TO RETURN", tdcgame.ScreenH/2+32, 7, scale)
+		writeCentered(screen, "PRESS THE BIG RED BUTTON TO RETURN", tdcgame.ScreenH/2+32, 6, scale)
 	}
 
 	if btnPulse > 0 {
