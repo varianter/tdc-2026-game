@@ -43,13 +43,73 @@ func (c *Canvas) Rect(x, y, w, h float32, clr color.Color) {
 //go:embed assets/cats/scaredBig.mp3
 var assets embed.FS
 
+//go:embed shaders/crt.kage
+var crtShaderSrc []byte
+
 const (
 	ScreenW = 426
 	ScreenH = 240
 )
 
+// crtMode selects the global CRT post-process. Toggled from the launcher.
+type crtMode int
+
+const (
+	crtOff crtMode = iota
+	crtSubtle
+	crtFull
+)
+
+// currentCRT is the active CRT mode. Shared between the launcher (which toggles
+// it) and Game.Draw (which applies it). Defaults to subtle so the effect is
+// visible out of the box.
+var currentCRT = crtSubtle
+
+var crtShader *ebiten.Shader
+
+// ensureCRTShader lazily compiles the shader on first use (after the graphics
+// context exists), then caches it.
+func ensureCRTShader() *ebiten.Shader {
+	if crtShader == nil {
+		s, err := ebiten.NewShader(crtShaderSrc)
+		if err != nil {
+			log.Fatalf("compile CRT shader: %v", err)
+		}
+		crtShader = s
+	}
+	return crtShader
+}
+
+// crtUniforms returns the shader uniforms for a mode. crtOff is handled before
+// the shader runs, so only subtle/full are represented here.
+func crtUniforms(m crtMode) map[string]any {
+	u := map[string]any{"Logical": []float32{float32(ScreenW), float32(ScreenH)}}
+	switch m {
+	case crtFull:
+		u["ScanDepth"] = float32(0.35)
+		u["ScanHard"] = float32(-3.0)
+		u["BrightBoost"] = float32(1.18)
+		u["MaskDark"] = float32(0.90)
+		u["MaskLight"] = float32(1.12)
+		u["WarpX"] = float32(0.03)
+		u["WarpY"] = float32(0.04)
+		u["Vignette"] = float32(0.25)
+	default: // crtSubtle
+		u["ScanDepth"] = float32(0.18)
+		u["ScanHard"] = float32(-2.0)
+		u["BrightBoost"] = float32(1.06)
+		u["MaskDark"] = float32(1.0) // 1.0/1.0 = mask disabled
+		u["MaskLight"] = float32(1.0)
+		u["WarpX"] = float32(0.0) // 0 = flat, no curvature
+		u["WarpY"] = float32(0.0)
+		u["Vignette"] = float32(0.12)
+	}
+	return u
+}
+
 type Game struct {
 	currentScene Scene
+	offscreen    *ebiten.Image // frame buffer the scene renders into before the CRT pass
 }
 
 // Layout is required by ebiten.Game; LayoutF is called instead when present.
@@ -77,7 +137,28 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	g.currentScene.Draw(screen)
+	if currentCRT == crtOff {
+		g.currentScene.Draw(screen)
+		return
+	}
+
+	// Render the whole frame into an offscreen buffer, then blit it to the real
+	// screen through the CRT shader so every game and the launcher get the
+	// effect uniformly.
+	w, h := screen.Bounds().Dx(), screen.Bounds().Dy()
+	if w == 0 || h == 0 {
+		return
+	}
+	if g.offscreen == nil || g.offscreen.Bounds().Dx() != w || g.offscreen.Bounds().Dy() != h {
+		g.offscreen = ebiten.NewImage(w, h)
+	}
+	g.offscreen.Clear()
+	g.currentScene.Draw(g.offscreen)
+
+	op := &ebiten.DrawRectShaderOptions{}
+	op.Images[0] = g.offscreen
+	op.Uniforms = crtUniforms(currentCRT)
+	screen.DrawRectShader(w, h, ensureCRTShader(), op)
 }
 
 // GameRunnerScene wraps a tdcgame.GameRunner as a Scene.
