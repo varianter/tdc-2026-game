@@ -15,6 +15,11 @@ import (
 
 const sampleRate = 44100
 
+// rng is seeded with a fixed value so regenerating the assets reproduces the
+// same bytes. With the global (auto-seeded) source, every run rewrote the
+// noise-based clips even when nothing about them had changed.
+var rng = rand.New(rand.NewSource(20260821))
+
 func main() {
 	write("bounce.wav", boing())
 	write("crush.wav", crush())
@@ -41,49 +46,46 @@ func boing() []float64 {
 		phase += 2 * math.Pi * freq / sampleRate
 
 		body := math.Sin(phase) + 0.25*math.Sin(2*phase)
-		env := math.Exp(-5.5 * p) * math.Min(1, p/0.004)
+		env := math.Exp(-5.5*p) * math.Min(1, p/0.004)
 
 		slap := 0.0
 		if t < 0.02 {
-			slap = (rand.Float64()*2 - 1) * math.Exp(-160*t) * 0.5
+			slap = (rng.Float64()*2 - 1) * math.Exp(-160*t) * 0.5
 		}
 		out[i] = 0.8*body*env + slap
 	}
 	return out
 }
 
-// crush is the boulder shattering: a bright noise burst scraping down into a
-// low rubble rumble, with a couple of stone-on-stone cracks layered in.
+// crush is the boulder crumbling: a soft gravelly wash over a low thud. The
+// noise runs through two cascaded low-pass poles and fades in over ~20ms, so it
+// reads as heavy stone rather than a bright click — sharp broadband transients
+// here are what make the sound hurt at close range.
 func crush() []float64 {
-	const dur = 0.45
+	const dur = 0.55
 	n := int(dur * sampleRate)
 	out := make([]float64, n)
 
-	// One-pole low-pass whose cutoff sweeps down, turning hiss into gravel.
-	lp := 0.0
+	// Two one-pole low-passes in series; the cutoff closes as the sound decays.
+	var lp1, lp2 float64
 	phase := 0.0
 	for i := 0; i < n; i++ {
 		t := float64(i) / sampleRate
 		p := t / dur
 
-		noise := rand.Float64()*2 - 1
-		a := 0.55 * math.Exp(-3.5*p) // cutoff coefficient, closes over time
-		lp += a * (noise - lp)
+		noise := rng.Float64()*2 - 1
+		a := 0.16 * math.Exp(-3*p) // low cutoff: keeps the hiss out of the top end
+		lp1 += a * (noise - lp1)
+		lp2 += a * (lp1 - lp2)
 
-		env := math.Exp(-4.5*p) * math.Min(1, p/0.002)
+		// Slow attack, so there is no click at the start.
+		env := math.Exp(-4*p) * math.Min(1, p/0.05)
 
-		// low thud underneath so it has weight
-		phase += 2 * math.Pi * (70 + 40*math.Exp(-12*p)) / sampleRate
-		thud := math.Sin(phase) * math.Exp(-9*p) * 0.6
+		// Low thud underneath for weight; this is where the impact lives now.
+		phase += 2 * math.Pi * (68 + 38*math.Exp(-10*p)) / sampleRate
+		thud := math.Sin(phase) * math.Exp(-7.5*p) * 0.55
 
-		// two sharp cracks a few milliseconds apart
-		crack := 0.0
-		for _, at := range []float64{0.0, 0.055} {
-			if d := t - at; d >= 0 && d < 0.03 {
-				crack += (rand.Float64()*2 - 1) * math.Exp(-90*d) * 0.45
-			}
-		}
-		out[i] = 1.5*lp*env + thud + crack
+		out[i] = 2.6*lp2*env + thud
 	}
 	return out
 }

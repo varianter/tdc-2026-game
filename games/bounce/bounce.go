@@ -53,9 +53,12 @@ const (
 	playTop     = fieldTop - playerBodyOffY
 	playBottom  = fieldBottom - playerBodyOffY - playerBodyH
 
-	baseScrollSpeed   = 60.0
-	maxScrollSpeed    = 250.0
-	speedIncreaseRate = 1.6
+	baseScrollSpeed = 60.0
+	maxScrollSpeed  = 250.0
+	// speedIncreaseRate ramps the scroll toward maxScrollSpeed as you travel.
+	// At 1.6 the cap was ~90s away, i.e. barely reachable inside a run; this
+	// gets there in around 40s so the run actually builds to top speed.
+	speedIncreaseRate = 3.5
 	// Dashing also drags the world past a little faster while you hold it, so
 	// the lunge feels like it covers ground rather than just sliding right.
 	chargeBoostsScroll   = true
@@ -66,7 +69,7 @@ const (
 	// further you get. Vertical movement isn't something you steer directly.
 	bounceSpeedBase = 90.0
 	bounceSpeedMax  = 330.0
-	bounceSpeedRamp = 0.014 // extra px/s of bounce per metre travelled
+	bounceSpeedRamp = 0.042 // extra px/s of bounce per metre travelled
 
 	// Holding the button shoots you forward through the castle; letting go
 	// drifts you back to where you started. That forward lunge is how you pick
