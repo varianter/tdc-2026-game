@@ -65,10 +65,24 @@ type LauncherScene struct {
 	holdTimer float64
 	fadeAlpha float64
 	viewport  *ebiten.Image
+
+	// holdArmed guards against a button that's still held when this scene
+	// becomes active (e.g. returning from the options screen) from being read
+	// as a fresh hold and launching a game. It's cleared when the button is
+	// released.
+	holdArmed bool
+
+	// Triple-press detection: three quick clicks opens the options screen.
+	clickCount int
+	clickTimer float64
 }
 
+// tripleClickWindow is the max gap between consecutive clicks that still counts
+// them as part of the same triple-press.
+const tripleClickWindow = 0.4
+
 func NewLauncherScene() *LauncherScene {
-	return &LauncherScene{}
+	return &LauncherScene{holdArmed: true}
 }
 
 func (l *LauncherScene) Update(dt float64) (Scene, error) {
@@ -82,15 +96,46 @@ func (l *LauncherScene) Update(dt float64) (Scene, error) {
 
 	switch l.state {
 	case launcherBrowsing:
-		if ebiten.IsKeyPressed(ebiten.KeyEnter) {
+		// Expire a pending triple-press if the clicks came too slowly.
+		if l.clickTimer > 0 {
+			l.clickTimer -= dt
+			if l.clickTimer <= 0 {
+				l.clickCount = 0
+			}
+		}
+
+		pressed := ebiten.IsKeyPressed(ebiten.KeyEnter)
+		if !l.holdArmed {
+			// Ignore a button carried over held (e.g. from the options screen)
+			// until it's released, so it can't immediately launch a game.
+			if !pressed {
+				l.holdArmed = true
+				l.holdTimer = 0
+			}
+			break
+		}
+
+		if pressed {
 			l.holdTimer += dt
 			if l.holdTimer >= holdToStartDuration {
 				l.state = launcherFading
 			}
 		} else {
+			// A quick tap (released before the hold bar appears) advances the
+			// selection; releasing after the bar has shown just aborts the hold.
 			if inpututil.IsKeyJustReleased(ebiten.KeyEnter) && l.holdTimer <= tapMaxDuration {
-				// Released before the hold bar even appeared: treat as a click, select next.
-				// Releasing after the bar has shown just aborts the hold and stays put.
+				// Track the tap for triple-press (opens the options screen).
+				if l.clickTimer > 0 {
+					l.clickCount++
+				} else {
+					l.clickCount = 1
+				}
+				l.clickTimer = tripleClickWindow
+				if l.clickCount >= 3 {
+					l.clickCount = 0
+					l.clickTimer = 0
+					return NewOptionsScene(l), nil
+				}
 				l.selected = (l.selected + 1) % len(launcherGames)
 			}
 			l.holdTimer = 0
@@ -126,6 +171,7 @@ func (l *LauncherScene) Draw(screen *ebiten.Image) {
 	l.drawText(screen, scale)
 	l.drawScoreboardText(screen, scale)
 	l.drawFooterHints(screen, scale)
+	l.drawOptionsHint(screen, scale)
 	l.drawLogo(screen, scale)
 
 	// Fade-to-black overlay (covers text too so the whole launcher fades)
@@ -429,6 +475,25 @@ func (l *LauncherScene) drawFooterHints(screen *ebiten.Image, scale float64) {
 	x += footerGroupGap
 
 	l.drawHint(screen, x, y, scale, true, "Hold to start")
+}
+
+// toggleCRT flips a mode on/off: selecting the active option turns the CRT off,
+// selecting the other switches to it (so Subtle/Full act as mutually exclusive
+// on/off toggles). Shared with the options screen.
+func toggleCRT(cur, clicked crtMode) crtMode {
+	if cur == clicked {
+		return crtOff
+	}
+	return clicked
+}
+
+// drawOptionsHint draws a right-anchored footer hint pointing at the options
+// screen (reached via a triple-press).
+func (l *LauncherScene) drawOptionsHint(screen *ebiten.Image, scale float64) {
+	y := float64(ScreenH-footerBottomPad) * scale
+	fs := float64(footerFontSize) * scale
+	tdcgame.WriteAt(screen, "TRIPLE-PRESS: OPTIONS", float64(scoreboardPanelX1)*scale, y,
+		fs, footerLabelColor, text.AlignEnd, text.AlignCenter)
 }
 
 // drawHint draws one "○ label" hint

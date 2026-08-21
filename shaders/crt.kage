@@ -1,0 +1,73 @@
+//kage:unit pixels
+
+package main
+
+// Inspired by Timothy Lottes' crt-lottes shader (as ported in eliasdaler/crten).
+// Adapted for this project: the scene is already rendered at device resolution
+// (so on-screen text stays crisp), so this pass modulates that image rather than
+// doing Lottes' full low-res upscale. It still borrows the parts that matter for
+// looking right: gamma-correct blending, a gaussian scanline beam profile, an
+// aperture-grille mask that boosts as well as dims, and brightness compensation.
+
+// Logical is the game's logical resolution (e.g. 426x240). Scanline and mask
+// frequencies are tied to it so they stay stable regardless of window size.
+var Logical vec2
+
+var ScanDepth float   // 0..1 how dark the gaps between scanlines get
+var ScanHard float    // negative; steeper (more negative) = tighter beam
+var BrightBoost float // compensates for scanline/mask darkening
+var MaskDark float    // off-channel multiplier for the shadow mask
+var MaskLight float   // on-channel multiplier for the shadow mask
+var WarpX float       // barrel distortion (0 = flat)
+var WarpY float
+var Vignette float
+
+func toLinear(c vec3) vec3 { return pow(c, vec3(2.2)) }
+func toSrgb(c vec3) vec3   { return pow(c, vec3(1.0/2.2)) }
+
+// warp bulges the image outward like a CRT tube. Zero warp returns uv unchanged.
+func warp(uv vec2) vec2 {
+	p := uv*2.0 - 1.0
+	p = p * vec2(1.0+p.y*p.y*WarpX, 1.0+p.x*p.x*WarpY)
+	return p*0.5 + 0.5
+}
+
+// mask returns the per-channel shadow-mask multiplier for column x (in logical
+// pixels), as repeating R/G/B triads.
+func mask(x float) vec3 {
+	t := mod(x, 3.0)
+	if t < 1.0 {
+		return vec3(MaskLight, MaskDark, MaskDark)
+	} else if t < 2.0 {
+		return vec3(MaskDark, MaskLight, MaskDark)
+	}
+	return vec3(MaskDark, MaskDark, MaskLight)
+}
+
+func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
+	origin := imageSrc0Origin()
+	size := imageSrc0Size()
+
+	uv := warp((srcPos - origin) / size)
+
+	// Anything the distortion pushed past the edge is off the tube -> black.
+	if uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0 {
+		return vec4(0.0, 0.0, 0.0, 1.0)
+	}
+
+	col := toLinear(imageSrc0At(origin + uv*size).rgb)
+
+	// Scanlines: gaussian beam profile centred on each logical row.
+	beam := fract(uv.y*Logical.y) - 0.5
+	scan := exp2(ScanHard * beam * beam * 4.0) // 1 at the row centre, dips toward the edges
+	col = col * (1.0 - ScanDepth*(1.0-scan))
+
+	// Aperture-grille mask, then brightness compensation.
+	col = col * mask(uv.x*Logical.x) * BrightBoost
+
+	// Vignette.
+	cen := uv - vec2(0.5)
+	col = col * (1.0 - Vignette*dot(cen, cen)*2.0)
+
+	return vec4(toSrgb(col), 1.0) * color
+}
