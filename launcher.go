@@ -38,9 +38,16 @@ const (
 
 const holdToStartDuration = 0.6
 
+// tapMaxDuration is how long the button may be held and still count as a tap
+// that advances the selection, rather than the beginning of a hold. At 0.15s
+// an ordinary press easily overshot it and did nothing at all.
+const tapMaxDuration = 0.25
+
 // holdIndicatorDelay is the grace period before the hold-progress bar appears.
-// Without it, every quick click while browsing flashes the bar on and off.
-const holdIndicatorDelay = 0.15
+// Without it, every quick click while browsing flashes the bar on and off. It
+// matches tapMaxDuration, so the bar appearing is exactly the signal that
+// letting go now aborts instead of selecting.
+const holdIndicatorDelay = tapMaxDuration
 
 type gameEntry struct {
 	name     string
@@ -81,7 +88,7 @@ func (l *LauncherScene) Update(dt float64) (Scene, error) {
 				l.state = launcherFading
 			}
 		} else {
-			if inpututil.IsKeyJustReleased(ebiten.KeyEnter) && l.holdTimer <= holdIndicatorDelay {
+			if inpututil.IsKeyJustReleased(ebiten.KeyEnter) && l.holdTimer <= tapMaxDuration {
 				// Released before the hold bar even appeared: treat as a click, select next.
 				// Releasing after the bar has shown just aborts the hold and stays put.
 				l.selected = (l.selected + 1) % len(launcherGames)
