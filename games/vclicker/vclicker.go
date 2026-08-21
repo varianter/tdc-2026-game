@@ -15,7 +15,14 @@ import (
 )
 
 const (
-	clickerDuration  = 8.0
+	clickerDuration = 8.0
+
+	// gameOverInputDelay is a grace period after time runs out during which
+	// button presses are ignored. Without it, a player still mashing at the
+	// final tick blows straight through the score screen and back to the
+	// launcher without ever reading it.
+	gameOverInputDelay = 1.25
+
 	btnW             = 70.0
 	btnH             = 50.0
 	particleLifetime = 1.2
@@ -67,9 +74,11 @@ type VClicker struct {
 	phaseX      float64
 	phaseY      float64
 	squishTimer float64
-	particles   []particle
-	rng         *rand.Rand
-	viewport    *ebiten.Image
+	// gameOverDelay counts down the input grace period on the score screen.
+	gameOverDelay float64
+	particles     []particle
+	rng           *rand.Rand
+	viewport      *ebiten.Image
 }
 
 func NewVClickerScene() *VClicker {
@@ -94,8 +103,13 @@ func (v *VClicker) GetGameParameters() *tdcgame.GameParameters {
 	return &tdcgame.GameParameters{ShouldCameraFollowPlayer: false}
 }
 
+// GetGameState holds off reporting the game as over until the grace period has
+// elapsed. The framework's GameRunner acts on the button the moment it sees
+// GameOver, so staying "running" for a beat is what keeps stray mashing from
+// skipping the score screen. The screen itself is already showing, because
+// CustomDraw keys off the internal state rather than this.
 func (v *VClicker) GetGameState() tdcgame.GameState {
-	if v.state == stateGameOver {
+	if v.state == stateGameOver && v.gameOverDelay <= 0 {
 		return tdcgame.GameOver
 	}
 	return tdcgame.Running
@@ -114,6 +128,12 @@ func (v *VClicker) GetPlayerUpdateFunc() tdcgame.PlayerUpdate {
 			v.state = statePlaying
 			v.timeLeft = clickerDuration
 		}
+		// The score screen keeps animating while it swallows input.
+		if v.state == stateGameOver {
+			v.gameOverDelay = max(0, v.gameOverDelay-dt)
+			v.updateParticles(dt)
+			return
+		}
 		if v.state != statePlaying {
 			return
 		}
@@ -122,6 +142,7 @@ func (v *VClicker) GetPlayerUpdateFunc() tdcgame.PlayerUpdate {
 		if v.timeLeft <= 0 {
 			v.timeLeft = 0
 			v.state = stateGameOver
+			v.gameOverDelay = gameOverInputDelay
 			return
 		}
 
@@ -213,7 +234,9 @@ func (v *VClicker) CustomDraw(screen *ebiten.Image) {
 		writeCentered(screen, "TIME'S UP!", tdcgame.ScreenH/2-34, 16, scale)
 		writeCentered(screen, fmt.Sprintf("SCORE: %d", v.score), tdcgame.ScreenH/2-10, 14, scale)
 		writeCentered(screen, fmt.Sprintf("%.1f CLICKS/SEC", cps), tdcgame.ScreenH/2+12, 10, scale)
-		writeCentered(screen, "PRESS THE BIG RED BUTTON TO RETURN", tdcgame.ScreenH/2+32, 6, scale)
+		if v.gameOverDelay <= 0 {
+			writeCentered(screen, "PRESS THE BIG RED BUTTON TO RETURN", tdcgame.ScreenH/2+32, 6, scale)
+		}
 	}
 
 	if btnPulse > 0 {

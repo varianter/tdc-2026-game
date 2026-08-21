@@ -1,13 +1,37 @@
 // Package tdcrunner
 package tdcrunner
 
-import "variant.dev/tdcgame/tdcgame"
+import (
+	"math"
+
+	"variant.dev/tdcgame/tdcgame"
+)
+
+const (
+	// goalX is where the pink end flag stands. GameRunner.Draw puts the pole at
+	// EndX()+goalFlagOffset, so the same numbers decide where it's drawn and
+	// where the player is judged to have reached it.
+	goalX          = 1200.0
+	goalFlagOffset = 4.0
+
+	// Finishing banks a flat bonus plus whatever is left on the clock, so
+	// getting to the flag beats running out the timer collecting coins.
+	goalBonus     = 100
+	goalTimeBonus = 5 // points per whole second remaining
+
+	runTimeLimit = 120.0
+)
 
 type TdcRunner struct {
-	gameState tdcgame.GameState
-	runtime   float64
+	gameState    tdcgame.GameState
+	runtime      float64
 	currentScore int
 }
+
+// EndX places the end flag. The framework falls back to tdcgame.GameEnd when a
+// game doesn't implement this; naming it here keeps the goal position and the
+// finish check from drifting apart.
+func (r *TdcRunner) EndX() float64 { return goalX }
 
 func (r *TdcRunner) GetCurrentScore() int {
 	return r.currentScore
@@ -67,10 +91,10 @@ func (r *TdcRunner) GetGameParameters() *tdcgame.GameParameters {
 func (r *TdcRunner) GetPlayerUpdateFunc() tdcgame.PlayerUpdate {
 	return func(buttonpressed bool, dt float64, level tdcgame.Level, p *tdcgame.MovingSquare) {
 		r.runtime += dt
-		if r.runtime >= 120 {
+		if r.runtime >= runTimeLimit {
 			r.gameState = tdcgame.GameOver
 		}
-		
+
 		if p.Onground && buttonpressed {
 			p.Vy = 300
 		}
@@ -102,8 +126,19 @@ func (r *TdcRunner) GetPlayerUpdateFunc() tdcgame.PlayerUpdate {
 			p.P.X = 0
 			p.Direction = p.Direction * -1.0
 		}
-		
+
 		r.currentScore += coins
+
+		// Reaching the pink end flag finishes the run. Until now the flag was
+		// only drawn, so the goal did nothing and the only way to end a run was
+		// the timeout.
+		if r.gameState != tdcgame.GameOver && p.P.X+p.W >= goalX+goalFlagOffset {
+			p.P.X = goalX + goalFlagOffset - p.W
+			p.Vx = 0
+			timeLeft := int(math.Max(0, runTimeLimit-r.runtime))
+			r.currentScore += goalBonus + timeLeft*goalTimeBonus
+			r.gameState = tdcgame.GameOver
+		}
 	}
 }
 
