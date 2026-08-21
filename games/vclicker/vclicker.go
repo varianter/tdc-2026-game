@@ -45,11 +45,9 @@ type particle struct {
 }
 
 var particleLabels = []string{
-	"</>", "{}", "PR", "UX", "MVP", "Rust",
-	"git", "// TODO", "BUG", "YAGNI", "AI",
-	"nil", "WIP", "API", "404", "EOF",
-	"Jira", "LGTM", "YOLO", "cookie", "npm",
-	"deploy", "figma", "scrum", "agile",
+	"No blockers", "LGTM", "Lunch soon",
+	"MVP", "Post mortem", "Backlog", "Action items",
+	"Basically finished", "Q1", "Q4?", "Github down",
 }
 
 var particleColors = []color.RGBA{
@@ -219,7 +217,7 @@ func (v *VClicker) CustomDraw(screen *ebiten.Image) {
 	// ── Text at device resolution so it stays crisp ────────────────────────
 	switch v.state {
 	case stateReady:
-		writeCentered(screen, "V-CLICKER", tdcgame.ScreenH/2-45, 14, scale)
+		writeCentered(screen, "SCRUM SMASHER 3000", tdcgame.ScreenH/2-45, 14, scale)
 		writeCentered(screen, "PRESS THE BIG RED BUTTON AS FAST AS YOU CAN!", tdcgame.ScreenH/2+38, 7, scale)
 		writeCentered(screen, "PRESS THE BIG RED BUTTON TO START", tdcgame.ScreenH-18, 8, scale)
 

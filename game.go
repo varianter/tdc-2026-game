@@ -267,7 +267,7 @@ func init() {
 		},
 	})
 	launcherGames = append(launcherGames, gameEntry{
-		name:     "V-CLICKER",
+		name:     "SCRUM SMASHER 3000",
 		gameName: "vclicker",
 		color:    color.RGBA{163, 24, 64, 255}, // #A31840
 		key:      ebiten.KeyV,
