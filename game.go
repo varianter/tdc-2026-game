@@ -159,9 +159,9 @@ func init() {
 		},
 	})
 	launcherGames = append(launcherGames, gameEntry{
-		name:     "BOUNCE",
+		name:     "BOUNCY CASTLE",
 		gameName: "bounce",
-		color:    color.RGBA{108, 42, 130, 255}, // #6C2A82
+		color:    color.RGBA{214, 58, 52, 255}, // #D63A34, bouncy-castle vinyl red
 		key:      ebiten.KeyB,
 		newScene: func() Scene {
 			return &GameRunnerScene{runner: createGameFramework("bounce"), gameName: "bounce", spaceTimer: -1}
