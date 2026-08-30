@@ -282,7 +282,7 @@ func New(assets embed.FS) *Game {
 	}
 	anim := &tdcgame.Animation{
 		Sheet:  sheet,
-		Frames: []int{0, 1, 2, 3, 4, 5, 6, 7},
+		Frames: []int{30, 31, 32, 33, 34, 35},
 		FPS:    12,
 	}
 

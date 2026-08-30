@@ -8,8 +8,7 @@ type Player struct {
 	sheet            *SpriteSheet
 	walkRightAnim    *Animation
 	walkLeftAnim     *Animation
-	idleRightAnim    *Animation
-	idleLeftAnim     *Animation
+	idle             *Animation
 	flyAnim          *Animation
 	currentAnimation *Animation
 	vx, vy           float64
@@ -30,15 +29,10 @@ func Newplayer(sheet *SpriteSheet, params *GameParameters) *Player {
 	player := &Player{
 		sheet:         sheet,
 		walkRightAnim: NewAnimation(sheet, 0, 8, params.AnimWalkFPS),
-		walkLeftAnim:  NewAnimation(sheet, 8, 8, params.AnimWalkFPS),
-		idleRightAnim: NewAnimation(sheet, 15, 1, 11),
-		idleLeftAnim:  NewAnimation(sheet, 15, 1, 11),
-		flyAnim: &Animation{
-			Sheet:  sheet,
-			Frames: []int{3, 6, 7},
-			FPS:    20,
-		},
-		x: 0, y: params.StartY,
+		walkLeftAnim:  NewAnimation(sheet, 10, 8, params.AnimWalkFPS),
+		idle:          NewAnimation(sheet, 20, 10, 10),
+		flyAnim:       NewAnimation(sheet, 30, 6, 10),
+		x:             0, y: params.StartY,
 		h: 64, w: 64,
 		movementScale: 1.0,
 		direction:     1.0,

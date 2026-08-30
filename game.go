@@ -231,15 +231,6 @@ func init() {
 	}
 
 	launcherGames = append(launcherGames, gameEntry{
-		name:     "TDCRUNNER",
-		gameName: "tdcrunner",
-		color:    color.RGBA{142, 32, 32, 255}, // #8E2020
-		key:      ebiten.KeyR,
-		newScene: func() Scene {
-			return &GameRunnerScene{runner: createGameFramework("tdcrunner"), gameName: "tdcrunner", spaceTimer: -1}
-		},
-	})
-	launcherGames = append(launcherGames, gameEntry{
 		name:     "BOUNCY CASTLE",
 		gameName: "bounce",
 		color:    color.RGBA{214, 58, 52, 255}, // #D63A34, bouncy-castle vinyl red
