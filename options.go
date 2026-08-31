@@ -1,13 +1,16 @@
 package main
 
 import (
+	"image"
+	"image/color"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"variant.dev/tdcgame/tdcgame"
 )
 
-// OptionsScene is a one-button settings screen, reached by triple-pressing on
+// OptionsScene is a one-button settings screen, reached with the O hotkey on
 // the launcher. It follows the same input grammar as the launcher: tap the
 // button to move between rows, hold it to activate the focused row (toggle a
 // CRT mode, or Back to return).
@@ -103,51 +106,50 @@ func (o *OptionsScene) drawRow(screen *ebiten.Image, scale float64, i int, y flo
 
 	px, pw, ph := float32(optPillX)*s, float32(optPillW)*s, float32(optPillH)*s
 	py := float32(y) * s
-	if focused {
-		fillRoundedRect(screen, px, py, pw, ph, ph/2, selectedRowColor)
-	} else {
-		strokeRoundedRect(screen, px, py, pw, ph, ph/2, s, rowBorderColor)
-	}
-
-	textColor := whiteTextColor
-	if focused {
-		textColor = headerTextColor
-	}
-
-	textX := float64(listStartX + 4)
 	midY := (y + optPillH/2) * scale
 
-	// Subtle/Full are checkboxes; Back is a plain action row.
-	if i == optSubtle || i == optFull {
-		checked := (i == optSubtle && currentCRT == crtSubtle) || (i == optFull && currentCRT == crtFull)
-		bx := float32(textX) * s
-		by := float32(midY) - float32(optBoxSz)*s/2
-		strokeRoundedRect(screen, bx, by, float32(optBoxSz)*s, float32(optBoxSz)*s, 2*s, s, textColor)
-		if checked {
-			inset := 2 * s
-			fillClr := headerTextColor
-			if !focused {
-				fillClr = selectedRowColor
+	// drawContent paints the row's checkbox + label in one color, so it can be
+	// drawn once in the resting color and again (clipped to the hold fill) in
+	// the inverted color as the fill sweeps across.
+	drawContent := func(dst *ebiten.Image, clr color.Color) {
+		textX := float64(listStartX + 4)
+		if i == optSubtle || i == optFull {
+			checked := (i == optSubtle && currentCRT == crtSubtle) || (i == optFull && currentCRT == crtFull)
+			bx := float32(textX) * s
+			by := float32(midY) - float32(optBoxSz)*s/2
+			box := float32(optBoxSz) * s
+			strokeRoundedRect(dst, bx, by, box, box, 2*s, s, clr)
+			if checked {
+				inset := 2 * s
+				// On an unfocused row the check keeps the accent color so it
+				// still reads as active; on the focused row it inverts with
+				// the text as the fill passes over it.
+				fillClr := clr
+				if !focused {
+					fillClr = selectedRowColor
+				}
+				fillRoundedRect(dst, bx+inset, by+inset, box-2*inset, box-2*inset, 1*s, fillClr)
 			}
-			fillRoundedRect(screen, bx+inset, by+inset, float32(optBoxSz)*s-2*inset, float32(optBoxSz)*s-2*inset, 1*s, fillClr)
+			textX += optBoxSz + 6
 		}
-		textX += optBoxSz + 6
+		tdcgame.WriteAt(dst, label, textX*scale, midY, 9*scale, clr, text.AlignStart, text.AlignCenter)
 	}
 
-	tdcgame.WriteAt(screen, label, textX*scale, midY, 9*scale, textColor, text.AlignStart, text.AlignCenter)
+	if !focused {
+		strokeRoundedRect(screen, px, py, pw, ph, ph/2, s, rowBorderColor)
+		drawContent(screen, whiteTextColor)
+		return
+	}
 
-	// Hold-to-select progress on the focused row.
-	if focused && ebiten.IsKeyPressed(ebiten.KeyEnter) {
-		p := o.holdTimer / holdToStartDuration
-		if p > 1 {
-			p = 1
-		}
-		const barW, barH = 40.0, 3.0
-		bx := float32(optPillX+optPillW-barW-8) * s
-		by := float32(y+optPillH/2-barH/2) * s
-		strokeRoundedRect(screen, bx, by, float32(barW)*s, float32(barH)*s, float32(barH)*s/2, s, headerTextColor)
-		if p > 0 {
-			fillRoundedRect(screen, bx, by, float32(barW*p)*s, float32(barH)*s, float32(barH)*s/2, headerTextColor)
-		}
+	// The focused row rests as an outline; holding fills it with the accent
+	// color left→right (same as the launcher), landing on the solid pill as the
+	// action fires. Text/checkbox flip to dark over the fill for contrast.
+	strokeRoundedRect(screen, px, py, pw, ph, ph/2, selectedRowStrokeW*s, selectedRowColor)
+	drawContent(screen, whiteTextColor)
+	if fillW := float32(holdFill(o.holdTimer)) * pw; fillW > 0 {
+		clip := image.Rect(int(px), int(py), int(px+fillW), int(py+ph+1))
+		dst := screen.SubImage(clip).(*ebiten.Image)
+		fillRoundedRect(dst, px, py, pw, ph, ph/2, selectedRowColor)
+		drawContent(dst, headerTextColor)
 	}
 }

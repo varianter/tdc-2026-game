@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"fmt"
+	"image"
 	"image/color"
 	"log"
 	"math"
@@ -36,12 +37,13 @@ const (
 	launcherFading
 )
 
-const holdToStartDuration = 0.6
+const holdToStartDuration = 0.85
 
 // tapMaxDuration is how long the button may be held and still count as a tap
 // that advances the selection, rather than the beginning of a hold. At 0.15s
-// an ordinary press easily overshot it and did nothing at all.
-const tapMaxDuration = 0.25
+// an ordinary press easily overshot it and did nothing at all; at 0.25s a
+// slightly-long tap while cycling still flashed the fill, so it sits at 0.33s.
+const tapMaxDuration = 0.33
 
 // holdIndicatorDelay is the grace period before the hold-progress bar appears.
 // Without it, every quick click while browsing flashes the bar on and off. It
@@ -71,15 +73,7 @@ type LauncherScene struct {
 	// as a fresh hold and launching a game. It's cleared when the button is
 	// released.
 	holdArmed bool
-
-	// Triple-press detection: three quick clicks opens the options screen.
-	clickCount int
-	clickTimer float64
 }
-
-// tripleClickWindow is the max gap between consecutive clicks that still counts
-// them as part of the same triple-press.
-const tripleClickWindow = 0.4
 
 func NewLauncherScene() *LauncherScene {
 	return &LauncherScene{holdArmed: true}
@@ -94,16 +88,15 @@ func (l *LauncherScene) Update(dt float64) (Scene, error) {
 		}
 	}
 
+	// O opens the options screen. A dedicated hotkey (like the per-game keys)
+	// instead of a triple-press, which players triggered accidentally while
+	// cycling. IsKeyJustPressed keeps a held O from immediately reopening it.
+	if inpututil.IsKeyJustPressed(ebiten.KeyO) {
+		return NewOptionsScene(l), nil
+	}
+
 	switch l.state {
 	case launcherBrowsing:
-		// Expire a pending triple-press if the clicks came too slowly.
-		if l.clickTimer > 0 {
-			l.clickTimer -= dt
-			if l.clickTimer <= 0 {
-				l.clickCount = 0
-			}
-		}
-
 		pressed := ebiten.IsKeyPressed(ebiten.KeyEnter)
 		if !l.holdArmed {
 			// Ignore a button carried over held (e.g. from the options screen)
@@ -124,18 +117,6 @@ func (l *LauncherScene) Update(dt float64) (Scene, error) {
 			// A quick tap (released before the hold bar appears) advances the
 			// selection; releasing after the bar has shown just aborts the hold.
 			if inpututil.IsKeyJustReleased(ebiten.KeyEnter) && l.holdTimer <= tapMaxDuration {
-				// Track the tap for triple-press (opens the options screen).
-				if l.clickTimer > 0 {
-					l.clickCount++
-				} else {
-					l.clickCount = 1
-				}
-				l.clickTimer = tripleClickWindow
-				if l.clickCount >= 3 {
-					l.clickCount = 0
-					l.clickTimer = 0
-					return NewOptionsScene(l), nil
-				}
 				l.selected = (l.selected + 1) % len(launcherGames)
 			}
 			l.holdTimer = 0
@@ -259,6 +240,11 @@ const (
 	selectedRowExtraW = 8
 )
 
+// selectedRowStrokeW is the outline thickness (in vp px) of the resting selected
+// row, before the hold fill sweeps in. Thicker than an unselected row's 1px
+// border so it reads as the active item.
+const selectedRowStrokeW = 2
+
 const selectedNameFontSize = 9
 
 // rowRect returns row i's pill rectangle in vp-space (unscaled): left edge,
@@ -291,10 +277,17 @@ func (l *LauncherScene) drawGameList(screen *ebiten.Image, scale float64) {
 		rowX, rowY, rowW, rowH := float32(x)*s, float32(y)*s, float32(w)*s, float32(h)*s
 
 		if i == l.selected {
-			fillRoundedRect(screen, rowX, rowY, rowW, rowH, rowH/2, selectedRowColor)
-			nameX := (x + 6) * scale
-			nameEndX := nameX + tdcgame.MeasureWidth(game.name, float64(selectedNameFontSize)*scale)
-			l.drawHoldHint(screen, scale, rowX, rowY, rowW, rowH, nameEndX)
+			// The selected row rests as an outline; holding fills it with the
+			// accent color left→right so it reads as filling up (not emptying),
+			// landing on the solid pill exactly as the game launches. Clipping
+			// the full-pill rounded rect to the filled sub-region keeps the left
+			// rounded cap and leaves a clean straight wipe edge.
+			strokeRoundedRect(screen, rowX, rowY, rowW, rowH, rowH/2, selectedRowStrokeW*s, selectedRowColor)
+			if fillW := float32(l.holdProgress()) * rowW; fillW > 0 {
+				clip := image.Rect(int(rowX), int(rowY), int(rowX+fillW), int(rowY+rowH+1))
+				dst := screen.SubImage(clip).(*ebiten.Image)
+				fillRoundedRect(dst, rowX, rowY, rowW, rowH, rowH/2, selectedRowColor)
+			}
 			continue
 		}
 
@@ -304,51 +297,24 @@ func (l *LauncherScene) drawGameList(screen *ebiten.Image, scale float64) {
 	}
 }
 
-// Hold-to-start progress bar embedded in the selected row, right-aligned
-// within the pill.
-const (
-	holdHintBarW     = 56
-	holdHintBarH     = 4
-	holdHintPadRight = 14
-	holdHintMinGap   = 10
-)
-
-// holdProgress returns the current hold-to-start fill fraction in [0,1].
-// It stays 0 until holdTimer passes holdIndicatorDelay, the same grace
-// period Update uses to distinguish a click from the start of a hold.
-func (l *LauncherScene) holdProgress() float64 {
-	if l.holdTimer <= holdIndicatorDelay {
+// holdFill maps a hold timer to a fill fraction in [0,1]. It stays 0 until the
+// timer passes holdIndicatorDelay, the same grace period Update uses to
+// distinguish a click from the start of a hold, so a tap never flashes a
+// partial fill. Shared by the launcher and options screens.
+func holdFill(holdTimer float64) float64 {
+	if holdTimer <= holdIndicatorDelay {
 		return 0
 	}
-	p := (l.holdTimer - holdIndicatorDelay) / (holdToStartDuration - holdIndicatorDelay)
+	p := (holdTimer - holdIndicatorDelay) / (holdToStartDuration - holdIndicatorDelay)
 	if p > 1 {
 		return 1
 	}
 	return p
 }
 
-// drawHoldHint draws the progress bar on the selected row, right-aligned
-// within the pill. If the game name leaves too little room it's skipped
-// entirely rather than overlapping the name — row width is fixed regardless
-// of how long the name is.
-func (l *LauncherScene) drawHoldHint(screen *ebiten.Image, scale float64, rowX, rowY, rowW, rowH float32, nameEndX float64) {
-	s := float32(scale)
-	barW := float32(holdHintBarW) * s
-	barH := float32(holdHintBarH) * s
-	barY := rowY + (rowH-barH)/2
-	barX := rowX + rowW - float32(holdHintPadRight)*s - barW
-	minGap := float64(holdHintMinGap) * scale
-
-	if float64(barX) < nameEndX+minGap {
-		return
-	}
-
-	strokeRoundedRect(screen, barX, barY, barW, barH, barH/2, s, headerTextColor)
-	fillW := float32(l.holdProgress()) * (barW - 2*s)
-	if fillW > 0 {
-		fillH := barH - 2*s
-		fillRoundedRect(screen, barX+s, barY+s, fillW, fillH, fillH/2, headerTextColor)
-	}
+// holdProgress returns the current hold-to-start fill fraction in [0,1].
+func (l *LauncherScene) holdProgress() float64 {
+	return holdFill(l.holdTimer)
 }
 
 // rankYellowColor marks the 1st-place rank/score; every other rank is plain
@@ -408,12 +374,23 @@ func topScores(gameName string) []int {
 // it stays crisp instead of being upscaled with the rest of the pixel art.
 func (l *LauncherScene) drawText(screen *ebiten.Image, scale float64) {
 	for i, game := range launcherGames {
-		x, y, _, h := l.rowRect(i)
+		x, y, w, h := l.rowRect(i)
 		midY := (y + h/2) * scale
 
 		if i == l.selected {
 			nameX := (x + 6) * scale
-			tdcgame.WriteAt(screen, game.name, nameX, midY, float64(selectedNameFontSize)*scale, headerTextColor, text.AlignStart, text.AlignCenter)
+			fontSize := float64(selectedNameFontSize) * scale
+			tdcgame.WriteAt(screen, game.name, nameX, midY, fontSize, whiteTextColor, text.AlignStart, text.AlignCenter)
+			// Over the hold-to-start accent fill the name flips to dark, so it
+			// stays legible as the fill sweeps across. Clip the second pass to
+			// the same filled sub-region the fill uses in drawGameList.
+			s := float32(scale)
+			rowX, rowY := float32(x)*s, float32(y)*s
+			if fillW := float32(l.holdProgress()) * float32(w) * s; fillW > 0 {
+				clip := image.Rect(int(rowX), int(rowY), int(rowX+fillW), int((y+h)*scale)+1)
+				dst := screen.SubImage(clip).(*ebiten.Image)
+				tdcgame.WriteAt(dst, game.name, nameX, midY, fontSize, headerTextColor, text.AlignStart, text.AlignCenter)
+			}
 			continue
 		}
 
@@ -488,11 +465,11 @@ func toggleCRT(cur, clicked crtMode) crtMode {
 }
 
 // drawOptionsHint draws a right-anchored footer hint pointing at the options
-// screen (reached via a triple-press).
+// screen (reached with the O hotkey).
 func (l *LauncherScene) drawOptionsHint(screen *ebiten.Image, scale float64) {
 	y := float64(ScreenH-footerBottomPad) * scale
 	fs := float64(footerFontSize) * scale
-	tdcgame.WriteAt(screen, "TRIPLE-PRESS: OPTIONS", float64(scoreboardPanelX1)*scale, y,
+	tdcgame.WriteAt(screen, "PRESS O: OPTIONS", float64(scoreboardPanelX1)*scale, y,
 		fs, footerLabelColor, text.AlignEnd, text.AlignCenter)
 }
 
