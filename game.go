@@ -211,7 +211,7 @@ func createGameFramework(gameName string) *tdcgame.GameRunner {
 	case "bounce":
 		return tdcgame.NewGameFrameworkWithPlayer(assets, bounce.NewBounce(assets), scoreKeeper, gameName)
 	case "vclicker":
-		return tdcgame.NewGameFrameworkWithPlayer(assets, vclicker.NewVClickerScene(), scoreKeeper, gameName)
+		return tdcgame.NewGameFrameworkWithPlayer(assets, vclicker.NewVClickerScene(assets), scoreKeeper, gameName)
 	case "flappy-guy":
 		return tdcgame.NewGameFrameworkWithPlayer(assets, flappyguy.New(), scoreKeeper, gameName)
 	case "petthedamncat":

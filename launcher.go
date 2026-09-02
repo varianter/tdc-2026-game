@@ -61,6 +61,11 @@ type gameEntry struct {
 
 var launcherGames []gameEntry
 
+// launcherSelected remembers the highlighted game across launcher instances, so
+// returning from a game (which builds a fresh LauncherScene) lands back on the
+// item you launched instead of resetting to the top of the list.
+var launcherSelected int
+
 type LauncherScene struct {
 	selected  int
 	state     launcherState
@@ -76,13 +81,18 @@ type LauncherScene struct {
 }
 
 func NewLauncherScene() *LauncherScene {
-	return &LauncherScene{holdArmed: true}
+	sel := launcherSelected
+	if sel < 0 || sel >= len(launcherGames) {
+		sel = 0
+	}
+	return &LauncherScene{holdArmed: true, selected: sel}
 }
 
 func (l *LauncherScene) Update(dt float64) (Scene, error) {
 	for _, k := range inpututil.AppendJustPressedKeys(nil) {
-		for _, g := range launcherGames {
+		for i, g := range launcherGames {
 			if g.key != ebiten.KeyMax && g.key == k {
+				launcherSelected = i
 				return g.newScene(), nil
 			}
 		}
@@ -118,6 +128,7 @@ func (l *LauncherScene) Update(dt float64) (Scene, error) {
 			// selection; releasing after the bar has shown just aborts the hold.
 			if inpututil.IsKeyJustReleased(ebiten.KeyEnter) && l.holdTimer <= tapMaxDuration {
 				l.selected = (l.selected + 1) % len(launcherGames)
+				launcherSelected = l.selected
 			}
 			l.holdTimer = 0
 		}
@@ -126,6 +137,7 @@ func (l *LauncherScene) Update(dt float64) (Scene, error) {
 		if l.fadeAlpha >= 255 {
 			entry := launcherGames[l.selected]
 			if entry.newScene != nil {
+				launcherSelected = l.selected
 				return entry.newScene(), nil
 			}
 		}
