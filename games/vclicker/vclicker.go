@@ -354,9 +354,12 @@ func (v *VClicker) drawGround(vp *ebiten.Image) {
 // resolution so it stays legible.
 func (v *VClicker) drawSprintBoard(vp *ebiten.Image) {
 	bx, by, bw, bh := float32(150), float32(40), float32(126), float32(58)
-	// legs
-	vector.FillRect(vp, bx+14, by+bh, 4, 42, color.RGBA{120, 120, 130, 255}, false)
-	vector.FillRect(vp, bx+bw-18, by+bh, 4, 42, color.RGBA{120, 120, 130, 255}, false)
+	// legs — run from the board's bottom edge down to the floor line
+	legTop := by + bh
+	legH := float32(floorY) - legTop
+	legClr := color.RGBA{120, 120, 130, 255}
+	vector.FillRect(vp, bx+14, legTop, 4, legH, legClr, false)
+	vector.FillRect(vp, bx+bw-18, legTop, 4, legH, legClr, false)
 	// frame + board
 	vector.FillRect(vp, bx-2, by-2, bw+4, bh+4, color.RGBA{90, 90, 100, 255}, false)
 	vector.FillRect(vp, bx, by, bw, bh, color.RGBA{235, 238, 240, 255}, false)
