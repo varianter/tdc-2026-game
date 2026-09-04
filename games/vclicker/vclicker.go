@@ -63,9 +63,9 @@ type particle struct {
 }
 
 var particleLabels = []string{
-	"No blockers", "LGTM", "Lunch soon",
-	"MVP", "Post mortem", "Backlog", "Action items",
-	"Basically done", "Q1", "Q4?", "Github down",
+	"No blockers", "LGTM", "Meetings all day",
+	"MVP", "Post mortem", "Hotfix", "Let's sync",
+	"Almost done", "WIP", "Github down", "Ship it",
 }
 
 var particleColors = []color.RGBA{
