@@ -89,6 +89,33 @@ type figure struct {
 	flip  bool
 }
 
+// bubble is a snide speech bubble popping up over a colleague as the score
+// climbs. fig indexes into crowd; life counts down to removal.
+type bubble struct {
+	fig  int
+	text string
+	life float64
+}
+
+const bubbleLife = 1.7
+
+// bubbleTiers drive the colleague chatter: as the score passes each milestone,
+// a random line from that tier pops over a random colleague. Lines get more
+// (ironically) impressed as the numbers get absurd — most players land 50–70,
+// the record is ~107.
+var bubbleTiers = []struct {
+	score int
+	lines []string
+}{
+	{20, []string{"warming up?", "slow start", "zzz"}},
+	{35, []string{"is that all?", "meh", "here we go.."}},
+	{50, []string{"ok ok", "not bad", "showing off?"}},
+	{65, []string{"wow, 10x developer!", "calm down", "woop"}},
+	{80, []string{"unhinged", "log off", "seek help"}},
+	{95, []string{"are you a bot?", "HR is watching", "this isn't healthy"}},
+	{110, []string{"absolute legend", "ok that's illegal", "new record?!"}},
+}
+
 // VClicker implements TdcGameWithPlayer and GameWithCustomDraw.
 // It takes full control of rendering via CustomDraw and manages its own
 // 8-second button-mashing game loop, staged as a scrum standup: a line of
@@ -111,6 +138,8 @@ type VClicker struct {
 	groundImg *ebiten.Image
 	crowd     []figure
 	animClock float64 // global idle time, advanced every frame
+	bubbles   []bubble
+	nextTier  int // next bubbleTiers milestone not yet fired
 
 	// head anchor of the main character, updated each draw; particles emit here
 	mainHeadX float64
@@ -200,6 +229,7 @@ func (v *VClicker) GetPlayerUpdateFunc() tdcgame.PlayerUpdate {
 			v.timeLeft = 0
 			v.state = stateGameOver
 			v.gameOverDelay = gameOverInputDelay
+			v.bubbles = nil // clear chatter so the score screen stays clean
 			return
 		}
 
@@ -218,6 +248,13 @@ func (v *VClicker) GetPlayerUpdateFunc() tdcgame.PlayerUpdate {
 		if v.spawnTimer > 0 {
 			v.spawnTimer = max(0, v.spawnTimer-dt)
 		}
+
+		// Snide colleague chatter as the score passes each milestone.
+		for v.nextTier < len(bubbleTiers) && v.score >= bubbleTiers[v.nextTier].score {
+			v.spawnBubble(bubbleTiers[v.nextTier].lines)
+			v.nextTier++
+		}
+		v.updateBubbles(dt)
 
 		v.updateParticles(dt)
 	}
@@ -265,6 +302,7 @@ func (v *VClicker) CustomDraw(screen *ebiten.Image) {
 		writeCentered(screen, "PRESS BUTTON TO START", tdcgame.ScreenH-16, 8, scale)
 
 	case statePlaying:
+		v.drawBubbleText(screen, scale)
 		v.drawParticles(screen, scale)
 		writeRight(screen, fmt.Sprintf("%d", v.score), tdcgame.ScreenW-6, 6, 16, scale)
 		writeCentered(screen, fmt.Sprintf("%.1f", v.timeLeft), 6, 10, scale)
@@ -290,9 +328,79 @@ func (v *VClicker) drawScene(vp *ebiten.Image) {
 	v.drawGround(vp)
 	v.drawCrowd(vp)
 	v.drawMainCharacter(vp)
+	v.drawBubbleBgs(vp)
 }
 
 // — internals ——————————————————————————————————————————————————————————————
+
+// spawnBubble pops a random line from the tier over a random colleague.
+func (v *VClicker) spawnBubble(lines []string) {
+	if len(v.crowd) == 0 || len(lines) == 0 {
+		return
+	}
+	v.bubbles = append(v.bubbles, bubble{
+		fig:  v.rng.Intn(len(v.crowd)),
+		text: lines[v.rng.Intn(len(lines))],
+		life: bubbleLife,
+	})
+}
+
+func (v *VClicker) updateBubbles(dt float64) {
+	alive := v.bubbles[:0]
+	for _, b := range v.bubbles {
+		b.life -= dt
+		if b.life > 0 {
+			alive = append(alive, b)
+		}
+	}
+	v.bubbles = alive
+}
+
+// bubbleLayout returns a bubble's box (viewport units) and the tail tip x,
+// centered above its colleague's head and clamped on-screen.
+func (v *VClicker) bubbleLayout(b bubble) (x, y, w, h, tipX float64) {
+	const fontSz, padX, padY = 6.0, 4.0, 3.0
+	f := v.crowd[b.fig]
+	w = tdcgame.MeasureWidth(b.text, fontSz) + 2*padX
+	h = fontSz + 2*padY
+	tipX = f.x
+	x = f.x - w/2
+	headTopY := f.y - (spriteFrame-spriteArtTop)*f.scale
+	y = headTopY - h - 6
+	if x < 2 {
+		x = 2
+	}
+	if x+w > tdcgame.ScreenW-2 {
+		x = tdcgame.ScreenW - 2 - w
+	}
+	return x, y, w, h, tipX
+}
+
+// drawBubbleBgs draws the speech-bubble boxes and tails into the viewport; the
+// text is drawn over them at device resolution in drawBubbleText.
+func (v *VClicker) drawBubbleBgs(vp *ebiten.Image) {
+	border := color.RGBA{40, 40, 55, 255}
+	fill := color.RGBA{245, 245, 250, 255}
+	for _, b := range v.bubbles {
+		x, y, w, h, tipX := v.bubbleLayout(b)
+		vector.FillRect(vp, float32(x-1), float32(y-1), float32(w+2), float32(h+2), border, false)
+		vector.FillRect(vp, float32(x), float32(y), float32(w), float32(h), fill, false)
+		// stepped downward tail pointing at the colleague
+		ty := float32(y + h)
+		vector.FillRect(vp, float32(tipX)-3, ty, 6, 2, fill, false)
+		vector.FillRect(vp, float32(tipX)-2, ty+2, 4, 2, fill, false)
+		vector.FillRect(vp, float32(tipX)-1, ty+4, 2, 2, fill, false)
+	}
+}
+
+// drawBubbleText draws each bubble's line centered in its box at device res.
+func (v *VClicker) drawBubbleText(screen *ebiten.Image, scale float64) {
+	for _, b := range v.bubbles {
+		x, y, w, h, _ := v.bubbleLayout(b)
+		tdcgame.WriteAt(screen, b.text, (x+w/2)*scale, (y+h/2)*scale, 6*scale,
+			color.RGBA{30, 30, 45, 255}, text.AlignCenter, text.AlignCenter)
+	}
+}
 
 // spawnParticles fires the buzzwords out in an upward fan from just above the
 // jumper's head, so the words arc over and clear him instead of raining down
