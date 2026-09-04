@@ -126,8 +126,8 @@ type PetTheDamnCat struct {
 	playerX       float64
 	currSpeed     float64
 	timeLeft      float64
-	catSheets    [3]*tdcgame.SpriteSheet
-	musicPlayer  *audio.Player // loops radioactive.wav while a big cat is active
+	catSheets     [3]*tdcgame.SpriteSheet
+	musicPlayer   *audio.Player // loops radioactive.wav while a big cat is active
 }
 
 func (p *PetTheDamnCat) Init(assets embed.FS) {
@@ -172,7 +172,7 @@ func (p *PetTheDamnCat) Init(assets embed.FS) {
 }
 
 func (p *PetTheDamnCat) GetGameObjects() []tdcgame.GameObject { return nil }
-func (p *PetTheDamnCat) GetCurrentScore() int                  { return p.Score }
+func (p *PetTheDamnCat) GetCurrentScore() int                 { return p.Score }
 func (p *PetTheDamnCat) EndX() float64 {
 	return p.playerX + math.Max(0, p.timeLeft)*p.currSpeed
 }
@@ -203,7 +203,10 @@ func (p *PetTheDamnCat) GetPlayerUpdateFunc() tdcgame.PlayerUpdate {
 		}
 
 		p.progress = math.Min(1.0, player.P.X/pathLength)
-		currentSpeed := minSpeed + (maxSpeed-minSpeed)*p.progress
+		// Ease-in the speed ramp (exponent <1) so the pace picks up a bit sooner
+		// in the run while still landing on maxSpeed at the finish line.
+		speedProgress := math.Pow(p.progress, 0.7)
+		currentSpeed := minSpeed + (maxSpeed-minSpeed)*speedProgress
 		player.Vx = currentSpeed
 		p.playerX = player.P.X
 		p.currSpeed = currentSpeed
@@ -657,7 +660,6 @@ func (p *PetTheDamnCat) drawStar(screen *ebiten.Image, cx, cy, outerR float32, p
 	vector.FillPath(screen, &path, nil, drawOp)
 }
 
-
 // treePositions describes background trees along the path.
 // x = world position, scale = size multiplier (1.4–2.2, bigger = closer).
 var treePositions = []struct{ x, scale float64 }{
@@ -730,7 +732,7 @@ var cloudPositions = []struct{ x, y, w float64 }{
 // DrawBackground draws clouds and park trees into the background layer.
 func (p *PetTheDamnCat) DrawBackground(screen *ebiten.Image, cameraX, cameraY float64) {
 	groundY := float32(tdcgame.GroundY - tdcgame.GroundDrawOffset) // ~180
-	skyH := float32(groundY)                                        // usable sky height
+	skyH := float32(groundY)                                       // usable sky height
 
 	// ── Clouds (parallax factor 0.2 — move at 20% of camera speed) ──────────
 	const cloudParallax = 0.2
@@ -781,13 +783,12 @@ func (p *PetTheDamnCat) DrawBackground(screen *ebiten.Image, cameraX, cameraY fl
 
 func (p *PetTheDamnCat) drawSpeedBar(screen *ebiten.Image, progress float64) {
 	const barW, barH = 60.0, 6.0
-	const barX, barY = float32(tdcgame.ScreenW-barW-8), float32(8)
+	const barX, barY = float32(tdcgame.ScreenW - barW - 8), float32(8)
 	vector.FillRect(screen, barX, barY, barW, barH, color.RGBA{40, 40, 40, 200}, false)
 	r := uint8(math.Min(255, progress*2*255))
 	g := uint8(math.Min(255, (1-progress)*2*255))
 	vector.FillRect(screen, barX, barY, float32(progress*barW), barH, color.RGBA{r, g, 30, 220}, false)
 }
-
 
 func (p *PetTheDamnCat) writeText(screen *ebiten.Image, msg string, x, y float64, size int, clr color.Color) {
 	tdcgame.WriteAt(screen, msg, x, y, float64(size), clr, text.AlignStart, text.AlignStart)
@@ -821,7 +822,7 @@ func (p *PetTheDamnCat) DrawOverlay(screen *ebiten.Image, scale, cameraX, camera
 
 	// Speed multiplier label next to the speed bar.
 	const barW, barH = 60.0, 6.0
-	const barX, barY = float64(tdcgame.ScreenW-barW-8), float64(8)
-	p.writeText(screen, fmt.Sprintf("x%.1f", 1+(maxSpeed/minSpeed-1)*p.progress),
+	const barX, barY = float64(tdcgame.ScreenW - barW - 8), float64(8)
+	p.writeText(screen, fmt.Sprintf("x%.1f", 1+(maxSpeed/minSpeed-1)*math.Pow(p.progress, 0.7)),
 		(barX-26)*scale, (barY-1)*scale, int(8*scale), color.RGBA{200, 200, 200, 200})
 }
