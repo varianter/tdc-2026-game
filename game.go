@@ -49,6 +49,7 @@ var crtShaderSrc []byte
 const (
 	ScreenW = 426
 	ScreenH = 240
+	maxRenderHeight = 1080.0
 )
 
 // crtMode selects the global CRT post-process. Toggled from the launcher.
@@ -117,11 +118,16 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return outsideWidth, outsideHeight
 }
 
-// LayoutF returns the full device-pixel window size so the game renders at
-// native resolution. Pixel-art content is upscaled inside Draw via a viewport.
+// LayoutF returns the internal render resolution, following the window's
+// device-pixel size but capping the height at maxRenderHeight (aspect preserved).
 func (g *Game) LayoutF(outsideWidth, outsideHeight float64) (float64, float64) {
 	s := ebiten.Monitor().DeviceScaleFactor()
-	return outsideWidth * s, outsideHeight * s
+	w, h := outsideWidth*s, outsideHeight*s
+	if h > maxRenderHeight {
+		w *= maxRenderHeight / h
+		h = maxRenderHeight
+	}
+	return w, h
 }
 
 func (g *Game) Update() error {
