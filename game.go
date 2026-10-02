@@ -61,9 +61,8 @@ const (
 )
 
 // currentCRT is the active CRT mode. Shared between the launcher (which toggles
-// it) and Game.Draw (which applies it). Defaults to subtle so the effect is
-// visible out of the box.
-var currentCRT = crtSubtle
+// it) and Game.Draw (which applies it). Defaults to off to avoid expensive rendering.
+var currentCRT = crtOff
 
 var crtShader *ebiten.Shader
 
