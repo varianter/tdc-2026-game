@@ -89,14 +89,19 @@ func (p *pressIcon) pressAmount(t float64) float64 {
 // pixel px device pixels wide. The hand sits 1px lower when pressing, to
 // follow the sunken dome.
 func (p *pressIcon) Draw(screen *ebiten.Image, x, y, px, t float64) {
+	p.DrawAlpha(screen, x, y, px, t, 1)
+}
+
+// DrawAlpha is Draw with an opacity in [0,1], for fading the icon in and out.
+func (p *pressIcon) DrawAlpha(screen *ebiten.Image, x, y, px, t, alpha float64) {
 	d := p.pressAmount(t)
 	button := buttonUp
 	if d == 1 {
 		button = buttonDown
 	}
-	button.Draw(screen, x, y+buttonTop*px, px)
+	button.DrawAlpha(screen, x, y+buttonTop*px, px, alpha)
 	handY := 1 - math.Round(handLift*(1-d))
-	p.hand.Draw(screen, x, y+handY*px, px)
+	p.hand.DrawAlpha(screen, x, y+handY*px, px, alpha)
 }
 
 var iconPalette = map[byte]color.RGBA{
@@ -120,6 +125,11 @@ type pixelArt struct {
 // Draw draws the sprite with its top-left at device-pixel (x, y), each sprite
 // pixel px device pixels wide, using nearest-neighbour filtering to stay crisp.
 func (p *pixelArt) Draw(screen *ebiten.Image, x, y, px float64) {
+	p.DrawAlpha(screen, x, y, px, 1)
+}
+
+// DrawAlpha is Draw with an opacity in [0,1], for fading the sprite in and out.
+func (p *pixelArt) DrawAlpha(screen *ebiten.Image, x, y, px, alpha float64) {
 	if p.img == nil {
 		rgba := image.NewRGBA(image.Rect(0, 0, len(p.rows[0]), len(p.rows)))
 		for py, row := range p.rows {
@@ -134,5 +144,6 @@ func (p *pixelArt) Draw(screen *ebiten.Image, x, y, px float64) {
 	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest}
 	op.GeoM.Scale(px, px)
 	op.GeoM.Translate(x, y)
+	op.ColorScale.ScaleAlpha(float32(alpha))
 	screen.DrawImage(p.img, op)
 }

@@ -161,6 +161,7 @@ func (l *LauncherScene) Draw(screen *ebiten.Image) {
 	l.drawGameList(screen, scale)
 	l.drawText(screen, scale)
 	l.drawScoreboardText(screen, scale)
+	l.drawControls(screen, scale)
 
 	// Fade-to-black overlay (covers text too so the whole launcher fades)
 	if l.fadeAlpha > 0 {
@@ -195,8 +196,8 @@ const (
 // panelBot). The list card spans the full width of the game rows; the scoreboard
 // card sits to its right.
 const (
-	panelTop = 44
-	panelBot = 164
+	panelTop = 52
+	panelBot = 172
 	// The card is centered on the game rows (whose center sits at x=155) so the
 	// selected row — which grows a few px wider — keeps equal margins on both
 	// sides of the purple frame instead of hugging one edge.
@@ -366,6 +367,55 @@ func (l *LauncherScene) drawTitle(screen *ebiten.Image, scale float64) {
 	uy := float32(29 * scale)
 	vector.StrokeLine(screen, float32(cx)-float32(vw)/2, uy, float32(cx)+float32(vw)/2, uy, float32(2*scale), neonCyan, false)
 	writeShadow(screen, "A R C A D E", cx, 38*scale, 6*scale, pinkText, text.AlignCenter, text.AlignCenter, 1*scale)
+}
+
+// drawControls explains the one-button controls in the top-left corner, reusing
+// the champion screen's animated press/hold icons. Rather than showing both at
+// once (visually busy), it cycles through a single slot — "PRESS FOR NEXT GAME"
+// fades out and "HOLD TO PLAY GAME" fades in — so only one hint shows at a time
+// and the finger motion makes the tap/hold difference obvious.
+func (l *LauncherScene) drawControls(screen *ebiten.Image, scale float64) {
+	// phase is a whole number of each icon's animation loop (tap 1.2s, hold 2.4s)
+	// so a hint always fades out between presses — 2 full hold loops — rather than
+	// cutting off mid-press. fade is the in/out time.
+	const phase, fade = 4.8, 0.5
+	const controlsX, iconTop = 24.0, 16.0 // nudged right and down to sit by the logo
+
+	cyc := math.Mod(attractTime, 2*phase)
+	local := cyc
+	icon, line1, line2, clr := tapIcon, "PRESS FOR", "NEXT GAME", cyanText
+	if cyc >= phase {
+		local = cyc - phase
+		icon, line1, line2, clr = holdIcon, "HOLD TO", "PLAY GAME", pinkText
+	}
+
+	alpha := 1.0
+	switch {
+	case local < fade:
+		alpha = local / fade
+	case local > phase-fade:
+		alpha = (phase - local) / fade
+	}
+
+	const iconLP = 0.9 // vp px per icon pixel
+	px := scale * iconLP
+	iconW, iconH := 20*iconLP, 22*iconLP
+	// Drive the icon from the per-hint local clock so its press cycle restarts
+	// when the hint appears and lands on a whole loop as it fades.
+	icon.DrawAlpha(screen, controlsX*scale, iconTop*scale, px, local, alpha)
+
+	// Two-line label to the right of the icon, both lines sharing the fade.
+	labelX := (controlsX + iconW + 5) * scale
+	mid := iconTop + iconH/2
+	writeFade(screen, line1, labelX, (mid-4)*scale, 6*scale, clr, alpha, scale)
+	writeFade(screen, line2, labelX, (mid+4)*scale, 6*scale, clr, alpha, scale)
+}
+
+// writeFade draws crisp left-aligned text with a dark drop-shadow at a given
+// opacity in [0,1], so a label can fade in and out.
+func writeFade(screen *ebiten.Image, msg string, x, y, size float64, clr color.RGBA, alpha, scale float64) {
+	tdcgame.WriteAt(screen, msg, x+scale, y+scale, size, color.RGBA{0, 0, 0, uint8(alpha * 200)}, text.AlignStart, text.AlignCenter)
+	tdcgame.WriteAt(screen, msg, x, y, size, withAlpha(clr, uint8(alpha*255)), text.AlignStart, text.AlignCenter)
 }
 
 // drawWordmark draws a compact crisp "VARIANT" in the top-left corner, used by
