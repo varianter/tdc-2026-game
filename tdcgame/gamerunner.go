@@ -100,6 +100,11 @@ func (g *GameRunner) State() GameState {
 	return g.game.GetGameState()
 }
 
+// Score returns the run's current (or, after GameOver, final) score.
+func (g *GameRunner) Score() int {
+	return g.currentScore
+}
+
 func (g *GameRunner) Update() error {
 	dt := 1.0 / float64(ebiten.TPS()) // calculate deltatime based on TPS, ~0.0166 at 60 TPS
 	g.runtime += dt
