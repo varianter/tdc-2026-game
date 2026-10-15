@@ -113,7 +113,19 @@ var iconPalette = map[byte]color.RGBA{
 	'd': {140, 30, 30, 255},   // button skirt
 	'g': {110, 110, 110, 255}, // housing
 	'G': {70, 70, 70, 255},    // housing shadow
+	'x': {255, 255, 255, 255}, // plain white, for tinting with DrawColored
 }
+
+// backIcon is a "return" arrow (like ⏎), drawn tinted to match the text
+// around it.
+var backIcon = &pixelArt{rows: []string{
+	".......x",
+	"..x....x",
+	".xx....x",
+	"xxxxxxxx",
+	".xx.....",
+	"..x.....",
+}}
 
 // pixelArt is a small sprite defined as rows of iconPalette characters. Its
 // image is built on first draw, once the graphics context exists.
@@ -130,6 +142,16 @@ func (p *pixelArt) Draw(screen *ebiten.Image, x, y, px float64) {
 
 // DrawAlpha is Draw with an opacity in [0,1], for fading the sprite in and out.
 func (p *pixelArt) DrawAlpha(screen *ebiten.Image, x, y, px, alpha float64) {
+	p.draw(screen, x, y, px, color.White, alpha)
+}
+
+// DrawColored is Draw with every pixel multiplied by clr, so art drawn in
+// plain white ('x') takes on clr.
+func (p *pixelArt) DrawColored(screen *ebiten.Image, x, y, px float64, clr color.Color) {
+	p.draw(screen, x, y, px, clr, 1)
+}
+
+func (p *pixelArt) draw(screen *ebiten.Image, x, y, px float64, clr color.Color, alpha float64) {
 	if p.img == nil {
 		rgba := image.NewRGBA(image.Rect(0, 0, len(p.rows[0]), len(p.rows)))
 		for py, row := range p.rows {
@@ -144,6 +166,7 @@ func (p *pixelArt) DrawAlpha(screen *ebiten.Image, x, y, px, alpha float64) {
 	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest}
 	op.GeoM.Scale(px, px)
 	op.GeoM.Translate(x, y)
+	op.ColorScale.ScaleWithColor(clr)
 	op.ColorScale.ScaleAlpha(float32(alpha))
 	screen.DrawImage(p.img, op)
 }

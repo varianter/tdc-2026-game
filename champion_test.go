@@ -75,3 +75,14 @@ func TestPressAmount(t *testing.T) {
 		}
 	}
 }
+
+func TestKeyOptions(t *testing.T) {
+	if got := strings.Join(keyOptions(1), ""); got != "ABC"+nameBack {
+		t.Errorf("keyOptions(1) = %q", got)
+	}
+	// Appending the back option must not write into nameKeys' backing array.
+	keyOptions(8)
+	if got := strings.Join(nameKeys[8].opts, ""); got != "WXYZ" {
+		t.Errorf("nameKeys[8] changed to %q", got)
+	}
+}
