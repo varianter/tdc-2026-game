@@ -13,8 +13,14 @@ import (
 )
 
 // championHoldDuration is how long the button must be held to leave the
-// champion screen, so a stray tap can't skip the celebration.
+// champion screen, so a stray tap can't skip the celebration. A tap opens
+// name entry instead.
 const championHoldDuration = 1.0
+
+// championInputGrace is how long the champion screen ignores the button after
+// it appears, so a player still mashing from the game can't tap straight
+// into name entry. A press still held afterwards must be released first.
+const championInputGrace = 0.6
 
 var crownJewelColor = color.RGBA{214, 58, 52, 255}
 
@@ -22,13 +28,14 @@ var crownJewelColor = color.RGBA{214, 58, 52, 255}
 type ChampionScene struct {
 	gameName  string
 	score     int
+	scoreID   int64
 	t         float64
 	holdTimer float64
 	holdArmed bool // false until the button carried over from the game is released
 }
 
-func NewChampionScene(gameName string, score int) *ChampionScene {
-	return &ChampionScene{gameName: gameName, score: score}
+func NewChampionScene(gameName string, score int, scoreID int64) *ChampionScene {
+	return &ChampionScene{gameName: gameName, score: score, scoreID: scoreID}
 }
 
 func (c *ChampionScene) Update(dt float64) (Scene, error) {
@@ -37,12 +44,19 @@ func (c *ChampionScene) Update(dt float64) (Scene, error) {
 		return NewLauncherScene(), nil
 	}
 
+	if c.t < championInputGrace {
+		return nil, nil
+	}
+
 	pressed := ebiten.IsKeyPressed(ebiten.KeyEnter)
 	if !c.holdArmed {
 		c.holdArmed = !pressed
 		return nil, nil
 	}
 	if !pressed {
+		if inpututil.IsKeyJustReleased(ebiten.KeyEnter) && c.holdTimer <= tapMaxDuration {
+			return NewNameEntryScene(c.gameName, c.scoreID), nil
+		}
 		c.holdTimer = 0
 		return nil, nil
 	}
@@ -74,16 +88,17 @@ func (c *ChampionScene) Draw(screen *ebiten.Image) {
 	entry := gameEntryFor(c.gameName)
 	tdcgame.WriteAt(screen, entry.name, cx*s, 82*s, 7*s, entry.color, text.AlignCenter, text.AlignStart)
 
-	// Leaderboard; the new #1 (always row 0) sits on a pulsing gold pill.
+	// Leaderboard; the new #1 (always row 0) sits on a pulsing gold pill and
+	// reads "YOU", since names are entered after this screen.
 	const boardW, rowH, rowsY, fontSize = 200.0, 18.0, 100.0, 7.0
 	x0, x1 := cx-boardW/2, cx+boardW/2
 	scores := topScores(c.gameName)
 	for i := 0; i < scoreboardMaxRows; i++ {
 		y := rowsY + float64(i)*rowH
 		clr := rankColor(i)
-		value := "0"
+		value, name := "0", ""
 		if i < len(scores) {
-			value = fmt.Sprintf("%d", scores[i])
+			value, name = fmt.Sprintf("%d", scores[i].Value), scores[i].Name
 		} else {
 			clr = scoreboardEmptyColor
 		}
@@ -92,19 +107,39 @@ func (c *ChampionScene) Draw(screen *ebiten.Image) {
 			gold := color.RGBA{uint8(255 * pulse), uint8(212 * pulse), uint8(47 * pulse), 255}
 			fillRoundedRect(screen, float32((x0-8)*s), float32((y-4)*s), float32((boardW+16)*s), float32((rowH-2)*s), float32(7*s), gold)
 			clr = color.RGBA{0, 0, 0, 255}
-			tdcgame.WriteAt(screen, "YOU", cx*s, y*s, fontSize*s, clr, text.AlignCenter, text.AlignStart)
+			if name == "" {
+				name = "YOU"
+			}
 		}
+		tdcgame.WriteAt(screen, name, (x0+30)*s, y*s, fontSize*s, clr, text.AlignStart, text.AlignStart)
 		tdcgame.WriteAt(screen, fmt.Sprintf("%d.", i+1), x0*s, y*s, fontSize*s, clr, text.AlignStart, text.AlignStart)
 		tdcgame.WriteAt(screen, value, x1*s, y*s, fontSize*s, clr, text.AlignEnd, text.AlignStart)
 	}
 
-	// Hold-to-continue hint with a fill bar that tracks the hold.
-	tdcgame.WriteAt(screen, "HOLD BUTTON TO CONTINUE", cx*s, 202*s, 6*s, whiteTextColor, text.AlignCenter, text.AlignStart)
-	const barW, barH, barY = 120.0, 5.0, 216.0
-	bx := float32((cx - barW/2) * s)
-	strokeRoundedRect(screen, bx, float32(barY*s), float32(barW*s), float32(barH*s), float32(barH/2*s), float32(s), whiteTextColor)
-	if p := math.Min(c.holdTimer/championHoldDuration, 1); p > 0 {
-		fillRoundedRect(screen, bx, float32(barY*s), float32(barW*p*s), float32(barH*s), float32(barH/2*s), rankYellowColor)
+	// Action hints: tap icon + label, then hold icon + label and
+	// a fill bar under it that tracks the hold.
+	// Icons are drawn at 1.5 logical px per icon pixel.
+	const iconScale, iconY, labelGap, groupGap, labelSize = 1.5, 187.0, 5.0, 36.0, 6.0
+	iconW := func(p *pixelArt) float64 { return float64(len(p.rows[0])) * iconScale }
+	tapLabel, holdLabel := "ENTER NAME", "CONTINUE"
+	tapW := iconW(tapIcon.hand) + labelGap + tdcgame.MeasureWidth(tapLabel, labelSize*s)/s
+	holdW := iconW(holdIcon.hand) + labelGap + tdcgame.MeasureWidth(holdLabel, labelSize*s)/s
+	labelY := (iconY + 11*iconScale) * s
+
+	gx := cx - (tapW+groupGap+holdW)/2
+	tapIcon.Draw(screen, gx*s, iconY*s, s*iconScale, c.t)
+	tdcgame.WriteAt(screen, tapLabel, (gx+iconW(tapIcon.hand)+labelGap)*s, labelY, labelSize*s, whiteTextColor, text.AlignStart, text.AlignCenter)
+
+	gx += tapW + groupGap
+	holdIcon.Draw(screen, gx*s, iconY*s, s*iconScale, c.t)
+	tdcgame.WriteAt(screen, holdLabel, (gx+iconW(holdIcon.hand)+labelGap)*s, labelY, labelSize*s, whiteTextColor, text.AlignStart, text.AlignCenter)
+
+	const barH, barY = 5.0, 225.0
+	bx, bw := float32(gx*s), float32(holdW*s)
+	strokeRoundedRect(screen, bx, float32(barY*s), bw, float32(barH*s), float32(barH/2*s), float32(s), whiteTextColor)
+	// The bar waits out the tap window so a tap doesn't flash it.
+	if p := math.Min((c.holdTimer-tapMaxDuration)/(championHoldDuration-tapMaxDuration), 1); p > 0 {
+		fillRoundedRect(screen, bx, float32(barY*s), bw*float32(p), float32(barH*s), float32(barH/2*s), rankYellowColor)
 	}
 }
 

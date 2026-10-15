@@ -173,22 +173,16 @@ type GameRunnerScene struct {
 	gameName        string
 	spaceTimer      float64 // time since first space press; -1 = not active
 	doubleTapWindow float64
-	checkedLeader   bool    // the new-#1 check has run for this game over
-	newLeader       bool    // the final score took #1 on the leaderboard
-	overTimer       float64 // time spent on the game-over overlay
+	checkedLeader   bool // the new-#1 check has run for this game over
 }
 
 const doubleTapWindow = 0.35
-
-// championDelay is how long the normal game-over overlay shows before a new
-// #1 score switches to the champion screen.
-const championDelay = 2.0
 
 // isNewLeader reports whether score strictly beats every other score for
 // gameName. The score must already be saved, so it appears in topScores.
 func isNewLeader(gameName string, score int) bool {
 	s := topScores(gameName)
-	return score > 0 && len(s) > 0 && s[0] == score && (len(s) < 2 || s[1] < score)
+	return score > 0 && len(s) > 0 && s[0].Value == score && (len(s) < 2 || s[1].Value < score)
 }
 
 func (s *GameRunnerScene) Update(dt float64) (Scene, error) {
@@ -197,18 +191,6 @@ func (s *GameRunnerScene) Update(dt float64) (Scene, error) {
 	}
 
 	if s.runner.State() == tdcgame.GameOver {
-		if !s.checkedLeader {
-			s.checkedLeader = true
-			s.newLeader = isNewLeader(s.gameName, s.runner.Score())
-		}
-		if s.newLeader {
-			s.overTimer += dt
-			if s.overTimer >= championDelay {
-				return NewChampionScene(s.gameName, s.runner.Score()), nil
-			}
-			return nil, s.runner.Update()
-		}
-
 		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			if s.spaceTimer >= 0 {
 				// Second press within window: restart
@@ -226,7 +208,17 @@ func (s *GameRunnerScene) Update(dt float64) (Scene, error) {
 		}
 	}
 
-	return nil, s.runner.Update()
+	err := s.runner.Update()
+
+	// A new #1 skips the game-over overlay and goes straight to the champion
+	// screen, in the same frame the final score is saved.
+	if !s.checkedLeader && s.runner.ScoreID() != 0 {
+		s.checkedLeader = true
+		if isNewLeader(s.gameName, s.runner.Score()) {
+			return NewChampionScene(s.gameName, s.runner.Score(), s.runner.ScoreID()), err
+		}
+	}
+	return nil, err
 }
 
 func (s *GameRunnerScene) Draw(screen *ebiten.Image) {
