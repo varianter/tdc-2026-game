@@ -9,6 +9,7 @@ import (
 	_ "image/png"
 	"math"
 	"math/rand"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -237,10 +238,11 @@ type Game struct {
 	pressure   float64
 	pumpLocked bool
 
-	// promptTime animates the start prompt and the game-over hints. Update
+	// createdAt clocks the start prompt and game-over hint animations. Update
 	// isn't called before the player presses the button or after game over,
-	// so these can't lean on timeSinceStart.
-	promptTime float64
+	// so these can't lean on timeSinceStart, and Draw runs once per display
+	// refresh (120 Hz on ProMotion), so they can't count frames either.
+	createdAt time.Time
 
 	// started flips on the first Update. The framework's GameRunner freezes the
 	// game (and so never calls Update) until the player presses the button, so
@@ -293,6 +295,7 @@ func New(assets embed.FS) *Game {
 	initSounds()
 
 	return &Game{
+		createdAt:      time.Now(),
 		playerAnim:     anim,
 		sokkerImg:      ebiten.NewImageFromImage(sokImg),
 		sokkerGlow:     buildSokkerGlow(sokImg, int(powerupDrawSize)),
@@ -979,8 +982,7 @@ func (g *Game) drawGameOver(screen *ebiten.Image, scale float64) {
 	tdcgame.WriteAt(screen, fmt.Sprintf("SCORE: %d", g.score), cx, float64(screenH/2+4)*scale,
 		16*scale, color.RGBA{255, 212, 47, 255}, text.AlignCenter, text.AlignStart)
 
-	g.promptTime += 1.0 / 60
-	tdcgame.DrawEndHints(screen, cx, float64(screenH/2+32)*scale, scale, g.promptTime, color.RGBA{200, 200, 210, 255})
+	tdcgame.DrawEndHints(screen, cx, float64(screenH/2+32)*scale, scale, time.Since(g.createdAt).Seconds(), color.RGBA{200, 200, 210, 255})
 }
 
 // The air supply rides along with the player as a round pressure dial, sitting
@@ -1031,8 +1033,7 @@ func (g *Game) drawStartPrompt(screen *ebiten.Image, scale float64) {
 	b := screen.Bounds()
 	vector.FillRect(screen, 0, 0, float32(b.Dx()), float32(b.Dy()), color.RGBA{10, 8, 18, 190}, false)
 
-	g.promptTime += 1.0 / 60
-	pulse := 0.75 + 0.25*math.Sin(g.promptTime*4)
+	pulse := 0.75 + 0.25*math.Sin(time.Since(g.createdAt).Seconds()*4)
 	buttonClr := color.RGBA{uint8(210 * pulse), uint8(45 * pulse), uint8(40 * pulse), 255}
 
 	// the big red button itself, so the prompt shows what to look for
