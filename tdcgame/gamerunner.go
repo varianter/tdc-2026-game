@@ -252,20 +252,18 @@ func (g *GameRunner) Draw(screen *ebiten.Image) {
 		const pad = 12
 		line1Y := int(float64(ScreenH/2-36) * s)
 		line2Y := int(float64(ScreenH/2-12) * s)
-		line3Y := int(float64(ScreenH/2+12) * s)
-		line4Y := int(float64(ScreenH/2+28) * s)
-		lineSmH := int(8 * s)
+		hintsY := float64(ScreenH/2+12) * s
+		hintsH := 22 * 1.5 * s // DrawEndHints icon height
 
 		bgX := float32(float64(ScreenW/2)*s - 180*s)
 		bgY := float32(float64(line1Y) - float64(pad)*s)
 		bgW := float32(360 * s)
-		bgH := float32(line4Y+lineSmH) + float32(pad)*float32(s) - bgY
+		bgH := float32(hintsY+hintsH) + float32(pad)*float32(s) - bgY
 
 		vector.FillRect(screen, bgX, bgY, bgW, bgH, color.RGBA{40, 40, 40, 200}, false)
 		WriteCentered(screen, "GAME OVER", line1Y, int(16*s))
 		WriteCentered(screen, fmt.Sprintf("Score: %d", g.currentScore), line2Y, int(16*s))
-		WriteCentered(screen, "Press button to return to the game wheel", line3Y, lineSmH)
-		WriteCentered(screen, "Double press button to replay the same game", line4Y, lineSmH)
+		DrawEndHints(screen, float64(screen.Bounds().Dx())/2, hintsY, s, g.runtime, color.White)
 	} else {
 		Write(screen, fmt.Sprintf("Score: %d.    Time left: %.1fs", g.game.GetCurrentScore(), MaxRunTime-g.runtime), int(5*s), int(5*s), int(8*s))
 	}

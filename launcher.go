@@ -45,9 +45,9 @@ var attractTime float64
 
 type gameEntry struct {
 	name     string
-	gameName string     // internal key scores are stored under, e.g. "tdcrunner"
-	color    color.RGBA // accent, e.g. for the name on the champion screen
-	icon     *pixelArt  // listIconSize×listIconSize sprite shown beside the name
+	gameName string            // internal key scores are stored under, e.g. "tdcrunner"
+	color    color.RGBA        // accent, e.g. for the name on the champion screen
+	icon     *tdcgame.PixelArt // listIconSize×listIconSize sprite shown beside the name
 	newScene func() Scene
 	key      ebiten.Key
 }
@@ -384,10 +384,10 @@ func (l *LauncherScene) drawControls(screen *ebiten.Image, scale float64) {
 
 	cyc := math.Mod(attractTime, 2*phase)
 	local := cyc
-	icon, line1, line2, clr := tapIcon, "PRESS FOR", "NEXT GAME", cyanText
+	icon, line1, line2, clr := tdcgame.TapIcon, "PRESS FOR", "NEXT GAME", cyanText
 	if cyc >= phase {
 		local = cyc - phase
-		icon, line1, line2, clr = holdIcon, "HOLD TO", "PLAY GAME", pinkText
+		icon, line1, line2, clr = tdcgame.HoldIcon, "HOLD TO", "PLAY GAME", pinkText
 	}
 
 	alpha := 1.0

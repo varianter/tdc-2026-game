@@ -237,8 +237,9 @@ type Game struct {
 	pressure   float64
 	pumpLocked bool
 
-	// promptTime animates the start prompt. Update isn't called until the
-	// player presses the button, so the prompt can't lean on timeSinceStart.
+	// promptTime animates the start prompt and the game-over hints. Update
+	// isn't called before the player presses the button or after game over,
+	// so these can't lean on timeSinceStart.
 	promptTime float64
 
 	// started flips on the first Update. The framework's GameRunner freezes the
@@ -978,11 +979,8 @@ func (g *Game) drawGameOver(screen *ebiten.Image, scale float64) {
 	tdcgame.WriteAt(screen, fmt.Sprintf("SCORE: %d", g.score), cx, float64(screenH/2+4)*scale,
 		16*scale, color.RGBA{255, 212, 47, 255}, text.AlignCenter, text.AlignStart)
 
-	hint := color.RGBA{200, 200, 210, 255}
-	tdcgame.WriteAt(screen, "PRESS THE RED BUTTON ONCE TO RETURN TO MAIN SCREEN", cx,
-		float64(screenH/2+34)*scale, 7*scale, hint, text.AlignCenter, text.AlignStart)
-	tdcgame.WriteAt(screen, "DOUBLE CLICK IT TO PLAY AGAIN", cx,
-		float64(screenH/2+48)*scale, 7*scale, hint, text.AlignCenter, text.AlignStart)
+	g.promptTime += 1.0 / 60
+	tdcgame.DrawEndHints(screen, cx, float64(screenH/2+32)*scale, scale, g.promptTime, color.RGBA{200, 200, 210, 255})
 }
 
 // The air supply rides along with the player as a round pressure dial, sitting

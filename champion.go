@@ -120,19 +120,19 @@ func (c *ChampionScene) Draw(screen *ebiten.Image) {
 	// a fill bar under it that tracks the hold.
 	// Icons are drawn at 1.5 logical px per icon pixel.
 	const iconScale, iconY, labelGap, groupGap, labelSize = 1.5, 187.0, 5.0, 36.0, 6.0
-	iconW := func(p *pixelArt) float64 { return float64(len(p.rows[0])) * iconScale }
+	iconW := func(p *tdcgame.PressIcon) float64 { return p.Width() * iconScale }
 	tapLabel, holdLabel := "ENTER NAME", "CONTINUE"
-	tapW := iconW(tapIcon.hand) + labelGap + tdcgame.MeasureWidth(tapLabel, labelSize*s)/s
-	holdW := iconW(holdIcon.hand) + labelGap + tdcgame.MeasureWidth(holdLabel, labelSize*s)/s
+	tapW := iconW(tdcgame.TapIcon) + labelGap + tdcgame.MeasureWidth(tapLabel, labelSize*s)/s
+	holdW := iconW(tdcgame.HoldIcon) + labelGap + tdcgame.MeasureWidth(holdLabel, labelSize*s)/s
 	labelY := (iconY + 11*iconScale) * s
 
 	gx := cx - (tapW+groupGap+holdW)/2
-	tapIcon.Draw(screen, gx*s, iconY*s, s*iconScale, c.t)
-	tdcgame.WriteAt(screen, tapLabel, (gx+iconW(tapIcon.hand)+labelGap)*s, labelY, labelSize*s, whiteTextColor, text.AlignStart, text.AlignCenter)
+	tdcgame.TapIcon.Draw(screen, gx*s, iconY*s, s*iconScale, c.t)
+	tdcgame.WriteAt(screen, tapLabel, (gx+iconW(tdcgame.TapIcon)+labelGap)*s, labelY, labelSize*s, whiteTextColor, text.AlignStart, text.AlignCenter)
 
 	gx += tapW + groupGap
-	holdIcon.Draw(screen, gx*s, iconY*s, s*iconScale, c.t)
-	tdcgame.WriteAt(screen, holdLabel, (gx+iconW(holdIcon.hand)+labelGap)*s, labelY, labelSize*s, whiteTextColor, text.AlignStart, text.AlignCenter)
+	tdcgame.HoldIcon.Draw(screen, gx*s, iconY*s, s*iconScale, c.t)
+	tdcgame.WriteAt(screen, holdLabel, (gx+iconW(tdcgame.HoldIcon)+labelGap)*s, labelY, labelSize*s, whiteTextColor, text.AlignStart, text.AlignCenter)
 
 	const barH, barY = 5.0, 225.0
 	bx, bw := float32(gx*s), float32(holdW*s)
