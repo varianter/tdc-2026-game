@@ -257,6 +257,7 @@ func init() {
 		name:     "BOUNCY CASTLE",
 		gameName: "bounce",
 		color:    color.RGBA{214, 58, 52, 255}, // #D63A34, bouncy-castle vinyl red
+		icon:     bouncyCastleIcon,
 		key:      ebiten.KeyB,
 		newScene: func() Scene {
 			return &GameRunnerScene{runner: createGameFramework("bounce"), gameName: "bounce", spaceTimer: -1}
@@ -266,6 +267,7 @@ func init() {
 		name:     "FLAPPY-GUY",
 		gameName: "flappy-guy",
 		color:    color.RGBA{60, 180, 220, 255},
+		icon:     flappyGuyIcon,
 		key:      ebiten.KeyF,
 		newScene: func() Scene {
 			return &GameRunnerScene{runner: createGameFramework("flappy-guy"), gameName: "flappy-guy", spaceTimer: -1}
@@ -275,6 +277,7 @@ func init() {
 		name:     "Pet the Damn Cat!",
 		gameName: "petthedamncat",
 		color:    color.RGBA{160, 82, 28, 255}, // #A0521C
+		icon:     catIcon,
 		key:      ebiten.KeyP,
 		newScene: func() Scene {
 			return &GameRunnerScene{runner: createGameFramework("petthedamncat"), gameName: "petthedamncat", spaceTimer: -1}
@@ -284,6 +287,7 @@ func init() {
 		name:     "SCRUM SMASHER 3000",
 		gameName: "vclicker",
 		color:    color.RGBA{163, 24, 64, 255}, // #A31840
+		icon:     hammerIcon,
 		key:      ebiten.KeyV,
 		newScene: func() Scene {
 			return &GameRunnerScene{runner: createGameFramework("vclicker"), gameName: "vclicker", spaceTimer: -1}
