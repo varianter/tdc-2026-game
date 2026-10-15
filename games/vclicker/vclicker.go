@@ -286,8 +286,8 @@ func (v *VClicker) CustomDraw(screen *ebiten.Image) {
 		v.drawTimerBar(vp, elapsed)
 	case stateGameOver:
 		vector.FillRect(vp, float32(tdcgame.ScreenW/2)-110, float32(tdcgame.ScreenH/2)-42,
-			220, 95, color.RGBA{10, 10, 22, 210}, false)
-		drawBorder(vp, float32(tdcgame.ScreenW/2)-110, float32(tdcgame.ScreenH/2)-42, 220, 95)
+			220, 104, color.RGBA{10, 10, 22, 210}, false)
+		drawBorder(vp, float32(tdcgame.ScreenW/2)-110, float32(tdcgame.ScreenH/2)-42, 220, 104)
 	}
 
 	op := &ebiten.DrawImageOptions{}
@@ -318,8 +318,7 @@ func (v *VClicker) CustomDraw(screen *ebiten.Image) {
 		writeCentered(screen, fmt.Sprintf("SCORE: %d", v.score), tdcgame.ScreenH/2-10, 14, scale)
 		writeCentered(screen, fmt.Sprintf("%.1f CLICKS/SEC", cps), tdcgame.ScreenH/2+12, 10, scale)
 		if v.gameOverDelay <= 0 {
-			writeCentered(screen, "DOUBLE PRESS BUTTON TO REPLAY", tdcgame.ScreenH/2+30, 6, scale)
-			writeCentered(screen, "OR PRESS ONCE TO RETURN", tdcgame.ScreenH/2+41, 6, scale)
+			tdcgame.DrawEndHints(screen, tdcgame.ScreenW/2*scale, (tdcgame.ScreenH/2+25)*scale, scale, elapsed, color.White)
 		}
 	}
 }
