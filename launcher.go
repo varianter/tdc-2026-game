@@ -1,34 +1,19 @@
 package main
 
 import (
-	"embed"
 	"fmt"
 	"image"
 	"image/color"
-	"log"
 	"math"
+	"math/rand"
 	"sort"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"variant.dev/tdcgame/tdcgame"
 )
-
-//go:embed assets/variant_logo.png
-var logoFS embed.FS
-
-var logoImage *ebiten.Image
-
-func init() {
-	var err error
-	logoImage, _, err = ebitenutil.NewImageFromFileSystem(logoFS, "assets/variant_logo.png")
-	if err != nil {
-		log.Fatal(err)
-	}
-}
 
 type launcherState int
 
@@ -50,6 +35,13 @@ const tapMaxDuration = 0.33
 // matches tapMaxDuration, so the bar appearing is exactly the signal that
 // letting go now aborts instead of selecting.
 const holdIndicatorDelay = tapMaxDuration
+
+// attractTime is a monotonic clock, in seconds, driving every launcher/options
+// animation (scrolling grid, twinkling stars, breathing hero button). It's a
+// package global so the Options screen — which reuses the launcher's backdrop —
+// keeps animating while it's in front, even though the launcher's own Update
+// isn't running then. Both scenes advance it by dt.
+var attractTime float64
 
 type gameEntry struct {
 	name     string
@@ -89,6 +81,8 @@ func NewLauncherScene() *LauncherScene {
 }
 
 func (l *LauncherScene) Update(dt float64) (Scene, error) {
+	attractTime += dt
+
 	for _, k := range inpututil.AppendJustPressedKeys(nil) {
 		for i, g := range launcherGames {
 			if g.key != ebiten.KeyMax && g.key == k {
@@ -159,13 +153,14 @@ func (l *LauncherScene) Draw(screen *ebiten.Image) {
 	op.Filter = ebiten.FilterNearest
 	screen.DrawImage(vp, op)
 
-	l.drawGameList(screen, scale)
+	// Dark panels first so every label sits on a clean background, then the
+	// crisp content on top of them.
+	l.drawTitle(screen, scale)
+	drawPanel(screen, scale, listCardX0, panelTop, listCardX1, panelBot, neonPurple)
 	l.drawScoreboardPanel(screen, scale)
+	l.drawGameList(screen, scale)
 	l.drawText(screen, scale)
 	l.drawScoreboardText(screen, scale)
-	l.drawFooterHints(screen, scale)
-	l.drawOptionsHint(screen, scale)
-	l.drawLogo(screen, scale)
 
 	// Fade-to-black overlay (covers text too so the whole launcher fades)
 	if l.fadeAlpha > 0 {
@@ -176,86 +171,217 @@ func (l *LauncherScene) Draw(screen *ebiten.Image) {
 }
 
 const listPanelW = 290
-const logoHeaderH = 24
 
 // Shared row layout, used both when drawing the low-res list visuals and
 // when drawing the crisp, device-resolution text on top of them.
-// listStartY leaves listTopPad of breathing room below the logo header,
-// above the first row's pill top, instead of butting it right up against
-// the header. listRowGap is the whitespace between one pill's bottom and
-// the next one's top; listRowH (the pitch between row tops) is derived from
-// it so the pill height itself (listPillH) stays fixed regardless of how
-// much gap is configured.
+// listStartY leaves room for the neon title band above the first row. listRowGap
+// is the whitespace between one pill's bottom and the next one's top; listRowH
+// (the pitch between row tops) is derived from it so the pill height itself
+// (listPillH) stays fixed regardless of how much gap is configured.
 const (
-	listPillH    = 22
-	listRowGap   = 6
-	listRowH     = listPillH + listRowGap
-	listTopPad   = 32
-	listStartY   = logoHeaderH + listTopPad + listRowGap
+	listPillH  = 22
+	listRowGap = 6
+	listRowH   = listPillH + listRowGap
+	// listStartY centers the four-row block vertically in the card so the top and
+	// bottom margins match (and the selected row's growth never overruns the
+	// frame). The block spans 4*listRowH-listRowGap tall.
+	listStartY   = panelTop + (panelBot-panelTop-(4*listRowH-listRowGap))/2 + listRowGap
 	listStartX   = 32
 	listSwatch   = 10
 	listFontSize = 8
 )
 
+// The games list and scoreboard are drawn as two aligned dark cards (panelTop..
+// panelBot). The list card spans the full width of the game rows; the scoreboard
+// card sits to its right.
+const (
+	panelTop = 44
+	panelBot = 164
+	// The card is centered on the game rows (whose center sits at x=155) so the
+	// selected row — which grows a few px wider — keeps equal margins on both
+	// sides of the purple frame instead of hugging one edge.
+	listCardX0 = 14
+	listCardX1 = 296
+)
+
+// cornerR is the shared corner radius (vp units) for panels and rows. Kept small
+// so frames read as crisp 8-bit rectangles rather than soft bubbles.
+const cornerR = 3
+
 const (
 	scoreboardX             = listPanelW + 32
 	scoreboardPanelX0       = scoreboardX - 6
 	scoreboardPanelX1       = ScreenW - listStartX
-	scoreboardPanelY0       = listStartY - listRowGap
 	scoreboardHeaderH       = 18
 	scoreboardTitleFontSize = 5
 	scoreboardRowH          = 16
-	scoreboardRowsStartY    = scoreboardPanelY0 + scoreboardHeaderH + 6
+	scoreboardRowsStartY    = panelTop + scoreboardHeaderH + 12
 	scoreboardValuePadRight = 6
 	scoreboardMaxRows       = 5
 	scoreboardFontSize      = 7
 )
 
+// Neon synthwave palette. The hues are shared across the launcher and the
+// options screen (same package) so the whole menu system reads as one piece.
+// The *Text colors are deliberately bright so text stays crisp and legible on
+// the near-black backdrop — the glow lives on the shapes (frames, button,
+// floor), never smeared across the type.
 var (
-	headerBgColor   = color.RGBA{242, 242, 242, 255} // #F2F2F2
-	headerTextColor = color.RGBA{40, 40, 40, 255}    // #282828
+	neonCyan   = color.RGBA{45, 226, 230, 255}  // #2DE2E6
+	neonPink   = color.RGBA{255, 56, 100, 255}  // #FF3864
+	neonPurple = color.RGBA{122, 47, 245, 255}  // #7A2FF5
+	cyanText   = color.RGBA{120, 245, 250, 255} // bright cyan for the title
+	pinkText   = color.RGBA{255, 120, 150, 255} // bright pink for accents
+	starColor  = color.RGBA{200, 230, 255, 255} // cool white twinkle
 )
 
-// bgColor is the launcher's dark background.
-var bgColor = color.RGBA{40, 40, 40, 255}            // #282828
-var whiteTextColor = color.RGBA{242, 242, 242, 255}  // #F2F2F2
-var rowBorderColor = color.RGBA{106, 106, 106, 255}  // #6A6A6A
-var selectedRowColor = color.RGBA{255, 212, 47, 255} // #FFD42F
+// bgColor is the launcher's near-black backdrop; the rest of the shared palette
+// vars are retinted for the neon look. headerTextColor stays dark because it's
+// the text/icon color painted over the bright accent fill as a hold charges.
+var bgColor = color.RGBA{10, 6, 18, 255}              // #0A0612
+var whiteTextColor = color.RGBA{236, 240, 255, 255}   // cool near-white
+var rowBorderColor = color.RGBA{74, 58, 110, 255}     // dim purple outline
+var selectedRowColor = neonCyan                       // accent for the focused row
+var headerTextColor = color.RGBA{10, 6, 18, 255}      // dark text over bright fills
+var panelFillColor = color.RGBA{18, 11, 32, 235}      // near-opaque dark card
+var footerLabelColor = color.RGBA{159, 232, 234, 255} // soft cyan
+
+// --- Animated backdrop --------------------------------------------------------
+
+// gridHorizonY is the vanishing-point height of the synthwave floor grid. It
+// sits below the content cards so the grid and its glow never bleed behind the
+// game list or scoreboard; stars live above it, the grid sweeps from it down.
+const gridHorizonY = 182
+
+type star struct {
+	x, y  float32
+	phase float64
+	size  float32
+}
+
+var stars []star
+
+func init() {
+	// A fixed seed keeps the starfield identical every launch (and across the
+	// many redraws), so stars twinkle in place rather than reshuffling.
+	r := rand.New(rand.NewSource(1337))
+	for i := 0; i < 44; i++ {
+		s := star{
+			x:     float32(r.Float64()) * ScreenW,
+			y:     float32(r.Float64()) * (gridHorizonY - 14),
+			phase: r.Float64() * 2 * math.Pi,
+			size:  1,
+		}
+		if r.Float64() > 0.88 {
+			s.size = 2
+		}
+		stars = append(stars, s)
+	}
+}
 
 func (l *LauncherScene) drawBackground(vp *ebiten.Image) {
 	vp.Fill(bgColor)
-	vector.FillRect(vp, 0, 0, ScreenW, logoHeaderH, headerBgColor, false)
+	drawStars(vp)
+	drawHorizonGlow(vp)
+	drawFloorGrid(vp)
 }
 
-const logoPadY = 8
-
-// drawLogo draws the Variant logo at device-pixel resolution, top-left and
-// vertically centered within the header strip. It's scaled down from a
-// higher-resolution source image (not the low-res viewport) so it stays
-// crisp at any window size.
-func (l *LauncherScene) drawLogo(screen *ebiten.Image, scale float64) {
-	if logoImage == nil {
-		return
+// drawStars scatters twinkling dots across the sky. Each star's alpha breathes
+// on its own phase so the field shimmers instead of blinking in unison. They're
+// kept dim so they never fight the content cards drawn on top.
+func drawStars(vp *ebiten.Image) {
+	for _, s := range stars {
+		tw := 0.5 + 0.5*math.Sin(attractTime*2+s.phase)
+		a := uint8(40 + 110*tw)
+		vector.FillRect(vp, s.x, s.y, s.size, s.size, withAlpha(starColor, a), false)
 	}
-	targetH := float64(logoHeaderH-2*logoPadY) * scale
-	imgScale := targetH / float64(logoImage.Bounds().Dy())
-
-	op := &ebiten.DrawImageOptions{}
-	op.Filter = ebiten.FilterLinear
-	op.GeoM.Scale(imgScale, imgScale)
-	op.GeoM.Translate(float64(listStartX)*scale, (float64(logoHeaderH)*scale-targetH)/2)
-	screen.DrawImage(logoImage, op)
 }
+
+// drawHorizonGlow lays a hot-pink band along the horizon that fades upward, the
+// classic synthwave "sunset" bleeding into the sky above the grid.
+func drawHorizonGlow(vp *ebiten.Image) {
+	const bands = 6
+	for i := 0; i < bands; i++ {
+		a := uint8(float64(80) * (1 - float64(i)/bands))
+		y := float32(gridHorizonY) - float32(i)*2
+		vector.FillRect(vp, 0, y, ScreenW, 2, withAlpha(neonPink, a), false)
+	}
+	vector.FillRect(vp, 0, gridHorizonY, ScreenW, 1, neonPink, false)
+}
+
+// drawFloorGrid draws the receding synthwave floor: verticals converging on the
+// vanishing point and horizontal lines that accelerate toward the viewer as
+// attractTime advances, so the floor appears to scroll forever.
+func drawFloorGrid(vp *ebiten.Image) {
+	horizon := float32(gridHorizonY)
+	bottom := float32(ScreenH)
+	vanishX := float32(ScreenW) / 2
+
+	for j := -9; j <= 9; j++ {
+		bx := vanishX + float32(j)*48
+		vector.StrokeLine(vp, vanishX, horizon, bx, bottom, 1, withAlpha(neonPurple, 120), false)
+	}
+
+	// Horizontal lines sweep downward; a quadratic in t spaces them wider as they
+	// near the bottom (perspective), and the fractional scroll makes them flow.
+	frac := attractTime * 0.35
+	frac -= math.Floor(frac)
+	const lines = 8
+	for k := 0; k < lines; k++ {
+		t := (float64(k) + frac) / lines
+		y := horizon + (bottom-horizon)*float32(t*t)
+		a := uint8(50 + 170*t)
+		vector.StrokeLine(vp, 0, y, ScreenW, y, 1, withAlpha(neonCyan, a), false)
+	}
+}
+
+// --- Panels & crisp text ------------------------------------------------------
+
+// drawPanel draws one dark content card: a near-opaque fill under a neon tube
+// frame, so the crisp text placed on top always has clean contrast.
+func drawPanel(screen *ebiten.Image, scale, x0, y0, x1, y1 float64, frame color.RGBA) {
+	s := float32(scale)
+	r := float32(cornerR) * s
+	fillRoundedRect(screen, float32(x0)*s, float32(y0)*s, float32(x1-x0)*s, float32(y1-y0)*s, r, panelFillColor)
+	strokeNeonRect(screen, float32(x0)*s, float32(y0)*s, float32(x1-x0)*s, float32(y1-y0)*s, r, frame, s)
+}
+
+// writeShadow draws crisp text with a single 1px dark drop-shadow for contrast
+// over busy areas (title, hero floor). No halo — the shadow keeps the pixel
+// font sharp instead of smeared.
+func writeShadow(dst *ebiten.Image, msg string, x, y, size float64, clr color.RGBA, pa, sa text.Align, off float64) {
+	tdcgame.WriteAt(dst, msg, x+off, y+off, size, color.RGBA{0, 0, 0, 210}, pa, sa)
+	tdcgame.WriteAt(dst, msg, x, y, size, clr, pa, sa)
+}
+
+// drawTitle draws the crisp VARIANT / ARCADE wordmark centered along the top,
+// with a neon underline. The space on the synthwave floor below is left open for
+// a one-button animation landing in a later change.
+func (l *LauncherScene) drawTitle(screen *ebiten.Image, scale float64) {
+	cx := float64(ScreenW) / 2 * scale
+	titleSize := 16 * scale
+
+	writeShadow(screen, "VARIANT", cx, 19*scale, titleSize, cyanText, text.AlignCenter, text.AlignCenter, 1.5*scale)
+	vw := tdcgame.MeasureWidth("VARIANT", titleSize)
+	uy := float32(29 * scale)
+	vector.StrokeLine(screen, float32(cx)-float32(vw)/2, uy, float32(cx)+float32(vw)/2, uy, float32(2*scale), neonCyan, false)
+	writeShadow(screen, "A R C A D E", cx, 38*scale, 6*scale, pinkText, text.AlignCenter, text.AlignCenter, 1*scale)
+}
+
+// drawWordmark draws a compact crisp "VARIANT" in the top-left corner, used by
+// the options screen where the big centered title would crowd the content.
+func (l *LauncherScene) drawWordmark(screen *ebiten.Image, scale float64) {
+	x := float64(listStartX) * scale
+	y := 14 * scale
+	writeShadow(screen, "VARIANT", x, y, 10*scale, cyanText, text.AlignStart, text.AlignCenter, 1*scale)
+}
+
+// --- Game list ----------------------------------------------------------------
 
 const (
 	selectedRowExtraH = 4
 	selectedRowExtraW = 8
 )
-
-// selectedRowStrokeW is the outline thickness (in vp px) of the resting selected
-// row, before the hold fill sweeps in. Thicker than an unselected row's 1px
-// border so it reads as the active item.
-const selectedRowStrokeW = 2
 
 const selectedNameFontSize = 9
 
@@ -276,36 +402,30 @@ func (l *LauncherScene) rowRect(i int) (x, y, w, h float64) {
 	return x, y, w, h
 }
 
-// drawGameList draws the pill-shaped selection highlight, each unselected
-// game's color swatch, and (on the selected row) the hold-to-start hint, at
-// device-pixel resolution so the rounded corners stay smooth regardless of
-// window scale. The selected row drops its swatch and grows a bit taller and
-// wider instead, so it reads as "the one you're on" rather than just another
-// list item.
+// drawGameList draws each game's pill inside the list card. Unselected rows are
+// a dim outline with the game's color swatch; the selected row glows brighter in
+// neon cyan and fills left→right as the button is held, landing on a solid pill
+// exactly as the game launches.
 func (l *LauncherScene) drawGameList(screen *ebiten.Image, scale float64) {
 	s := float32(scale)
+	r := float32(cornerR) * s
 	for i, game := range launcherGames {
 		x, y, w, h := l.rowRect(i)
 		rowX, rowY, rowW, rowH := float32(x)*s, float32(y)*s, float32(w)*s, float32(h)*s
 
 		if i == l.selected {
-			// The selected row rests as an outline; holding fills it with the
-			// accent color left→right so it reads as filling up (not emptying),
-			// landing on the solid pill exactly as the game launches. Clipping
-			// the full-pill rounded rect to the filled sub-region keeps the left
-			// rounded cap and leaves a clean straight wipe edge.
-			strokeRoundedRect(screen, rowX, rowY, rowW, rowH, rowH/2, selectedRowStrokeW*s, selectedRowColor)
+			strokeNeonRect(screen, rowX, rowY, rowW, rowH, r, selectedRowColor, s)
 			if fillW := float32(l.holdProgress()) * rowW; fillW > 0 {
 				clip := image.Rect(int(rowX), int(rowY), int(rowX+fillW), int(rowY+rowH+1))
 				dst := screen.SubImage(clip).(*ebiten.Image)
-				fillRoundedRect(dst, rowX, rowY, rowW, rowH, rowH/2, selectedRowColor)
+				fillRoundedRect(dst, rowX, rowY, rowW, rowH, r, selectedRowColor)
 			}
 			continue
 		}
 
-		strokeRoundedRect(screen, rowX, rowY, rowW, rowH, rowH/2, s, rowBorderColor)
+		strokeRoundedRect(screen, rowX, rowY, rowW, rowH, r, s, rowBorderColor)
 		swatch := float32(listSwatch) * s
-		fillRoundedRect(screen, float32(listStartX)*s, rowY+7*s, swatch, swatch, swatch/3, dimColor(game.color, 0.45))
+		fillRoundedRect(screen, float32(listStartX)*s, rowY+rowH/2-swatch/2, swatch, swatch, s, game.color)
 	}
 }
 
@@ -335,7 +455,7 @@ var rankYellowColor = color.RGBA{255, 212, 47, 255} // #FFD42F
 
 // scoreboardEmptyColor is used for the "0" placeholder value in an unfilled
 // scoreboard slot, so it reads as unset rather than an achieved score.
-var scoreboardEmptyColor = color.RGBA{106, 106, 106, 255} // #6A6A6A
+var scoreboardEmptyColor = color.RGBA{90, 74, 130, 255} // dim purple
 
 func rankColor(rank int) color.RGBA {
 	if rank == 0 {
@@ -344,28 +464,22 @@ func rankColor(rank int) color.RGBA {
 	return whiteTextColor
 }
 
-const scoreboardPanelPadBottom = 4
-const scoreboardPanelRadius = 10
-const scoreboardBorderWidth = 1
-
-// drawScoreboardPanel draws the scoreboard as a card
+// drawScoreboardPanel draws the scoreboard as a dark, neon-framed card aligned
+// with the game-list card, with a divider under the HIGH SCORES header.
 func (l *LauncherScene) drawScoreboardPanel(screen *ebiten.Image, scale float64) {
 	s := float32(scale)
-	r := float32(scoreboardPanelRadius) * s
+	drawPanel(screen, scale, scoreboardPanelX0, panelTop, scoreboardPanelX1, panelBot, neonCyan)
 
 	x0 := float32(scoreboardPanelX0) * s
 	x1 := float32(scoreboardPanelX1) * s
-	panelY0 := float32(scoreboardPanelY0) * s
-	panelY1 := float32(scoreboardRowsStartY+scoreboardMaxRows*scoreboardRowH+scoreboardPanelPadBottom) * s
-
-	fillRoundedTopRect(screen, x0, panelY0, x1-x0, float32(scoreboardHeaderH)*s, r, headerBgColor)
-	strokeRoundedRect(screen, x0, panelY0, x1-x0, panelY1-panelY0, r, float32(scoreboardBorderWidth)*s, headerBgColor)
+	hdrY := float32(panelTop+scoreboardHeaderH) * s
+	vector.StrokeLine(screen, x0+6*s, hdrY, x1-6*s, hdrY, s, withAlpha(neonCyan, 150), false)
 
 	dividerX0 := float32(scoreboardX) * s
 	dividerX1 := float32(scoreboardPanelX1-scoreboardValuePadRight) * s // matches the score value's right edge
 	for i := 1; i < scoreboardMaxRows; i++ {
 		y := float32(scoreboardRowsStartY+i*scoreboardRowH-scoreboardRowH/2) * s
-		vector.StrokeLine(screen, dividerX0, y, dividerX1, y, s/2, rowBorderColor, false)
+		vector.StrokeLine(screen, dividerX0, y, dividerX1, y, s/2, withAlpha(neonPurple, 110), false)
 	}
 }
 
@@ -383,7 +497,7 @@ func topScores(gameName string) []tdcgame.Score {
 	return scores
 }
 
-// drawText draws every label at device-pixel resolution (screen, not vp) so
+// drawText draws each game's name at device-pixel resolution (screen, not vp) so
 // it stays crisp instead of being upscaled with the rest of the pixel art.
 func (l *LauncherScene) drawText(screen *ebiten.Image, scale float64) {
 	for i, game := range launcherGames {
@@ -391,7 +505,7 @@ func (l *LauncherScene) drawText(screen *ebiten.Image, scale float64) {
 		midY := (y + h/2) * scale
 
 		if i == l.selected {
-			nameX := (x + 6) * scale
+			nameX := (x + 12) * scale
 			fontSize := float64(selectedNameFontSize) * scale
 			tdcgame.WriteAt(screen, game.name, nameX, midY, fontSize, whiteTextColor, text.AlignStart, text.AlignCenter)
 			// Over the hold-to-start accent fill the name flips to dark, so it
@@ -412,16 +526,15 @@ func (l *LauncherScene) drawText(screen *ebiten.Image, scale float64) {
 	}
 }
 
-// drawScoreboardText renders the high-score list for the currently selected
-// game
+// drawScoreboardText renders the high-score list for the currently selected game.
 func (l *LauncherScene) drawScoreboardText(screen *ebiten.Image, scale float64) {
 	if len(launcherGames) == 0 {
 		return
 	}
 
-	x := int(float64(scoreboardX) * scale)
-	titleMidY := (float64(scoreboardPanelY0) + float64(scoreboardHeaderH)/2) * scale
-	tdcgame.WriteAt(screen, "HIGH SCORES", float64(x), titleMidY, float64(scoreboardTitleFontSize)*scale, headerTextColor, text.AlignStart, text.AlignCenter)
+	x := float64(scoreboardX) * scale
+	titleMidY := float64(panelTop+scoreboardHeaderH/2) * scale
+	tdcgame.WriteAt(screen, "HIGH SCORES", x, titleMidY, float64(scoreboardTitleFontSize)*scale, neonCyan, text.AlignStart, text.AlignCenter)
 
 	scores := topScores(launcherGames[l.selected].gameName)
 	valueX := float64(scoreboardPanelX1-scoreboardValuePadRight) * scale
@@ -429,57 +542,37 @@ func (l *LauncherScene) drawScoreboardText(screen *ebiten.Image, scale float64) 
 	// Always render every slot (filled or not) so the card reads as a
 	// consistent podium rather than collapsing to a single placeholder line.
 	for i := 0; i < scoreboardMaxRows; i++ {
-		y := scoreboardRowsStartY + i*scoreboardRowH
+		y := float64(scoreboardRowsStartY+i*scoreboardRowH-2) * scale
 		clr := rankColor(i)
 		rank := fmt.Sprintf("%d.", i+1)
-		tdcgame.WriteAt(screen, rank, float64(x), float64(y-2)*scale, float64(scoreboardFontSize)*scale, clr, text.AlignStart, text.AlignStart)
+		tdcgame.WriteAt(screen, rank, x, y, float64(scoreboardFontSize)*scale, clr, text.AlignStart, text.AlignStart)
 
 		value, valueColor := "0", scoreboardEmptyColor
 		if i < len(scores) {
 			value, valueColor = fmt.Sprintf("%d", scores[i].Value), clr
 		}
-		tdcgame.WriteAt(screen, value, valueX, float64(y-2)*scale, float64(scoreboardFontSize)*scale, valueColor, text.AlignEnd, text.AlignStart)
+		tdcgame.WriteAt(screen, value, valueX, y, float64(scoreboardFontSize)*scale, valueColor, text.AlignEnd, text.AlignStart)
 
 		// The name squeezes in between rank and score at a smaller size,
 		// cut short when the card is too narrow for all of it.
 		if i < len(scores) && scores[i].Name != "" {
 			const nameFontSize, gap = 5.0, 3.0
 			fontSize := float64(scoreboardFontSize) * scale
-			nameX := float64(x) + tdcgame.MeasureWidth(rank, fontSize) + gap*scale
+			nameX := x + tdcgame.MeasureWidth(rank, fontSize) + gap*scale
 			avail := valueX - tdcgame.MeasureWidth(value, fontSize) - gap*scale - nameX
 			name := scores[i].Name
 			for name != "" && tdcgame.MeasureWidth(name, nameFontSize*scale) > avail {
 				name = name[:len(name)-1]
 			}
-			tdcgame.WriteAt(screen, name, nameX, float64(y-1)*scale, nameFontSize*scale, clr, text.AlignStart, text.AlignStart)
+			tdcgame.WriteAt(screen, name, nameX, y+scale, nameFontSize*scale, clr, text.AlignStart, text.AlignStart)
 		}
 	}
 }
 
 const (
-	footerBottomPad = 16
+	footerBottomPad = 8
 	footerFontSize  = 5
-	footerCircleR   = 4
-	footerIconGap   = 7
-	footerGroupGap  = 14
 )
-
-var footerLabelColor = color.RGBA{200, 200, 210, 255}
-
-// drawFooterHints draws the input-hint legend
-func (l *LauncherScene) drawFooterHints(screen *ebiten.Image, scale float64) {
-	y := float32(ScreenH-footerBottomPad) * float32(scale)
-
-	x := float64(listStartX)
-	x = l.drawHint(screen, x, y, scale, false, "Press to move")
-	x += footerGroupGap
-
-	dividerX := float32(x) * float32(scale)
-	vector.StrokeLine(screen, dividerX, y-6*float32(scale), dividerX, y+6*float32(scale), float32(scale), rowBorderColor, false)
-	x += footerGroupGap
-
-	l.drawHint(screen, x, y, scale, true, "Hold to start")
-}
 
 // toggleCRT flips a mode on/off: selecting the active option turns the CRT off,
 // selecting the other switches to it (so Subtle/Full act as mutually exclusive
@@ -489,38 +582,4 @@ func toggleCRT(cur, clicked crtMode) crtMode {
 		return crtOff
 	}
 	return clicked
-}
-
-// drawOptionsHint draws a right-anchored footer hint pointing at the options
-// screen (reached with the O hotkey).
-func (l *LauncherScene) drawOptionsHint(screen *ebiten.Image, scale float64) {
-	y := float64(ScreenH-footerBottomPad) * scale
-	fs := float64(footerFontSize) * scale
-	tdcgame.WriteAt(screen, "PRESS O: OPTIONS", float64(scoreboardPanelX1)*scale, y,
-		fs, footerLabelColor, text.AlignEnd, text.AlignCenter)
-}
-
-// drawHint draws one "○ label" hint
-func (l *LauncherScene) drawHint(screen *ebiten.Image, x float64, y float32, scale float64, filled bool, label string) float64 {
-	s := float32(scale)
-	cx := float32(x+footerCircleR) * s
-	if filled {
-		vector.FillCircle(screen, cx, y, footerCircleR*s, rankYellowColor, true)
-	} else {
-		vector.StrokeCircle(screen, cx, y, footerCircleR*s, s, footerLabelColor, true)
-	}
-
-	textX := x + footerCircleR*2 + footerIconGap
-	fontSize := footerFontSize * scale
-	tdcgame.WriteAt(screen, label, textX*scale, float64(y), fontSize, footerLabelColor, text.AlignStart, text.AlignCenter)
-	return textX + tdcgame.MeasureWidth(label, fontSize)/scale
-}
-
-func dimColor(c color.RGBA, f float64) color.RGBA {
-	return color.RGBA{
-		uint8(float64(c.R) * f),
-		uint8(float64(c.G) * f),
-		uint8(float64(c.B) * f),
-		c.A,
-	}
 }

@@ -33,10 +33,12 @@ const (
 	optRowCount
 )
 
-// Options list layout (vp-space units).
+// Options list layout (vp-space units). optHeaderY is where the "CRT EFFECT"
+// heading sits, below the corner VARIANT wordmark.
 const (
-	optStartY = logoHeaderH + 44
-	optRowH   = 26
+	optHeaderY = 42
+	optStartY  = optHeaderY + 26
+	optRowH    = 26
 	optPillX  = listStartX - 6
 	optPillW  = 220
 	optPillH  = 20
@@ -44,6 +46,8 @@ const (
 )
 
 func (o *OptionsScene) Update(dt float64) (Scene, error) {
+	attractTime += dt
+
 	if ebiten.IsKeyPressed(ebiten.KeyEnter) {
 		o.holdTimer += dt
 		if !o.consumed && o.holdTimer >= holdToStartDuration {
@@ -83,10 +87,10 @@ func (o *OptionsScene) Draw(screen *ebiten.Image) {
 	op.Filter = ebiten.FilterNearest
 	screen.DrawImage(vp, op)
 
-	o.prev.drawLogo(screen, scale)
+	o.prev.drawWordmark(screen, scale)
 
-	tdcgame.WriteAt(screen, "CRT EFFECT", float64(listStartX)*scale, float64(logoHeaderH+18)*scale,
-		10*scale, whiteTextColor, text.AlignStart, text.AlignStart)
+	writeShadow(screen, "CRT EFFECT", float64(listStartX)*scale, float64(optHeaderY)*scale,
+		10*scale, cyanText, text.AlignStart, text.AlignStart, 1*scale)
 
 	labels := [optRowCount]string{"Subtle", "Full", "Back"}
 	for i := 0; i < optRowCount; i++ {
@@ -106,6 +110,7 @@ func (o *OptionsScene) drawRow(screen *ebiten.Image, scale float64, i int, y flo
 
 	px, pw, ph := float32(optPillX)*s, float32(optPillW)*s, float32(optPillH)*s
 	py := float32(y) * s
+	rr := float32(cornerR) * s
 	midY := (y + optPillH/2) * scale
 
 	// drawContent paints the row's checkbox + label in one color, so it can be
@@ -136,20 +141,20 @@ func (o *OptionsScene) drawRow(screen *ebiten.Image, scale float64, i int, y flo
 	}
 
 	if !focused {
-		strokeRoundedRect(screen, px, py, pw, ph, ph/2, s, rowBorderColor)
+		strokeRoundedRect(screen, px, py, pw, ph, rr, s, rowBorderColor)
 		drawContent(screen, whiteTextColor)
 		return
 	}
 
-	// The focused row rests as an outline; holding fills it with the accent
-	// color left→right (same as the launcher), landing on the solid pill as the
-	// action fires. Text/checkbox flip to dark over the fill for contrast.
-	strokeRoundedRect(screen, px, py, pw, ph, ph/2, selectedRowStrokeW*s, selectedRowColor)
+	// The focused row rests as a glowing neon outline; holding fills it with the
+	// accent color left→right (same as the launcher), landing on the solid pill as
+	// the action fires. Text/checkbox flip to dark over the fill for contrast.
+	strokeNeonRect(screen, px, py, pw, ph, rr, selectedRowColor, s)
 	drawContent(screen, whiteTextColor)
 	if fillW := float32(holdFill(o.holdTimer)) * pw; fillW > 0 {
 		clip := image.Rect(int(px), int(py), int(px+fillW), int(py+ph+1))
 		dst := screen.SubImage(clip).(*ebiten.Image)
-		fillRoundedRect(dst, px, py, pw, ph, ph/2, selectedRowColor)
+		fillRoundedRect(dst, px, py, pw, ph, rr, selectedRowColor)
 		drawContent(dst, headerTextColor)
 	}
 }

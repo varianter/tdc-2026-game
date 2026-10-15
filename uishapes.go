@@ -49,32 +49,18 @@ func strokeRoundedRect(dst *ebiten.Image, x, y, w, h, r, strokeWidth float32, cl
 	vector.StrokePath(dst, roundedRectPath(x, y, w, h, r), strokeOp, drawOp)
 }
 
-// roundedTopRectPath builds a rectangle path with only its top two corners
-// rounded and square bottom corners — a header cap that seats flush against
-// a body drawn below it.
-func roundedTopRectPath(x, y, w, h, r float32) *vector.Path {
-	if maxR := w / 2; r > maxR {
-		r = maxR
-	}
-	if r > h {
-		r = h
-	}
-
-	var p vector.Path
-	p.MoveTo(x+r, y)
-	p.LineTo(x+w-r, y)
-	p.ArcTo(x+w, y, x+w, y+r, r)
-	p.LineTo(x+w, y+h)
-	p.LineTo(x, y+h)
-	p.LineTo(x, y+r)
-	p.ArcTo(x, y, x+r, y, r)
-	p.Close()
-	return &p
+// withAlpha returns c with its alpha replaced, for the many translucent
+// glow/halo passes the neon look layers on top of each other.
+func withAlpha(c color.RGBA, a uint8) color.RGBA {
+	c.A = a
+	return c
 }
 
-// fillRoundedTopRect fills a top-rounded rectangle (see roundedTopRectPath).
-func fillRoundedTopRect(dst *ebiten.Image, x, y, w, h, r float32, clr color.Color) {
-	op := &vector.DrawPathOptions{AntiAlias: true}
-	op.ColorScale.ScaleWithColor(clr)
-	vector.FillPath(dst, roundedTopRectPath(x, y, w, h, r), nil, op)
+// strokeNeonRect outlines a rounded rectangle as a glowing neon tube: a wide,
+// translucent halo of the same hue underneath a narrow bright core. scale is the
+// device-pixel scale so the tube keeps a constant apparent thickness at any
+// window size.
+func strokeNeonRect(dst *ebiten.Image, x, y, w, h, r float32, clr color.RGBA, scale float32) {
+	strokeRoundedRect(dst, x, y, w, h, r, 4*scale, withAlpha(clr, 70))
+	strokeRoundedRect(dst, x, y, w, h, r, 1.3*scale, clr)
 }
