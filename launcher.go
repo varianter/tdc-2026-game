@@ -370,12 +370,13 @@ func (l *LauncherScene) drawScoreboardPanel(screen *ebiten.Image, scale float64)
 }
 
 // topScores returns up to scoreboardMaxRows scores for gameName, highest first.
-func topScores(gameName string) []int {
+// Equal scores keep save order, so an earlier score outranks a later tie.
+func topScores(gameName string) []tdcgame.Score {
 	if scoreKeeper == nil {
 		return nil
 	}
 	scores := scoreKeeper.GetScores(gameName)
-	sort.Sort(sort.Reverse(sort.IntSlice(scores)))
+	sort.SliceStable(scores, func(i, j int) bool { return scores[i].Value > scores[j].Value })
 	if len(scores) > scoreboardMaxRows {
 		scores = scores[:scoreboardMaxRows]
 	}
@@ -435,9 +436,23 @@ func (l *LauncherScene) drawScoreboardText(screen *ebiten.Image, scale float64) 
 
 		value, valueColor := "0", scoreboardEmptyColor
 		if i < len(scores) {
-			value, valueColor = fmt.Sprintf("%d", scores[i]), clr
+			value, valueColor = fmt.Sprintf("%d", scores[i].Value), clr
 		}
 		tdcgame.WriteAt(screen, value, valueX, float64(y-2)*scale, float64(scoreboardFontSize)*scale, valueColor, text.AlignEnd, text.AlignStart)
+
+		// The name squeezes in between rank and score at a smaller size,
+		// cut short when the card is too narrow for all of it.
+		if i < len(scores) && scores[i].Name != "" {
+			const nameFontSize, gap = 5.0, 3.0
+			fontSize := float64(scoreboardFontSize) * scale
+			nameX := float64(x) + tdcgame.MeasureWidth(rank, fontSize) + gap*scale
+			avail := valueX - tdcgame.MeasureWidth(value, fontSize) - gap*scale - nameX
+			name := scores[i].Name
+			for name != "" && tdcgame.MeasureWidth(name, nameFontSize*scale) > avail {
+				name = name[:len(name)-1]
+			}
+			tdcgame.WriteAt(screen, name, nameX, float64(y-1)*scale, nameFontSize*scale, clr, text.AlignStart, text.AlignStart)
+		}
 	}
 }
 

@@ -36,6 +36,8 @@ type GameRunner struct {
 	game              TdcGame
 	params            *GameParameters
 	currentScore      int
+	scoreID           int64 // DB ID of the saved final score; 0 until saved
+	scoreSaved        bool  // the final score has been saved (or failed to)
 	previousGameState GameState
 	scoreKeeper       *ScoreKeeper
 	gameName          string
@@ -100,6 +102,16 @@ func (g *GameRunner) State() GameState {
 	return g.game.GetGameState()
 }
 
+// Score returns the run's current (or, after GameOver, final) score.
+func (g *GameRunner) Score() int {
+	return g.currentScore
+}
+
+// ScoreID returns the saved final score's ID (for ScoreKeeper.SetName), or 0.
+func (g *GameRunner) ScoreID() int64 {
+	return g.scoreID
+}
+
 func (g *GameRunner) Update() error {
 	dt := 1.0 / float64(ebiten.TPS()) // calculate deltatime based on TPS, ~0.0166 at 60 TPS
 	g.runtime += dt
@@ -130,21 +142,33 @@ func (g *GameRunner) Update() error {
 				g.camera.Follow(g.player, ScreenH, ScreenW)
 			}
 		}
+		if fs, ok := g.game.(TdcGameWithFinalScore); ok && fs.ScoreFinal() {
+			g.saveScore()
+		}
 	}
 
 	state := g.game.GetGameState()
 	if state != g.previousGameState {
 		if state == GameOver {
-			if g.scoreKeeper != nil {
-				if err := g.scoreKeeper.AddScore(g.gameName, g.currentScore); err != nil {
-					log.Printf("failed to save score: %v", err)
-				}
-			}
+			g.saveScore()
 		}
 		g.previousGameState = state
 	}
 
 	return nil
+}
+
+// saveScore saves the final score once; later calls do nothing.
+func (g *GameRunner) saveScore() {
+	if g.scoreSaved || g.scoreKeeper == nil {
+		return
+	}
+	g.scoreSaved = true
+	id, err := g.scoreKeeper.AddScore(g.gameName, g.currentScore)
+	if err != nil {
+		log.Printf("failed to save score: %v", err)
+	}
+	g.scoreID = id
 }
 
 func (g *GameRunner) Draw(screen *ebiten.Image) {

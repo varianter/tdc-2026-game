@@ -197,6 +197,10 @@ func (v *VClicker) GetGameState() tdcgame.GameState {
 
 func (v *VClicker) GetCurrentScore() int { return v.score }
 
+// ScoreFinal reports the score as final as soon as time runs out, so it's saved
+// (and a new #1 recognised) without waiting out the grace period above.
+func (v *VClicker) ScoreFinal() bool { return v.state == stateGameOver }
+
 // — TdcGameWithPlayer —————————————————————————————————————————————————————
 
 // GetPlayerUpdateFunc returns the game-logic callback invoked every frame by

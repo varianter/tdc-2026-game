@@ -173,9 +173,17 @@ type GameRunnerScene struct {
 	gameName        string
 	spaceTimer      float64 // time since first space press; -1 = not active
 	doubleTapWindow float64
+	checkedLeader   bool // the new-#1 check has run for this game over
 }
 
 const doubleTapWindow = 0.35
+
+// isNewLeader reports whether score strictly beats every other score for
+// gameName. The score must already be saved, so it appears in topScores.
+func isNewLeader(gameName string, score int) bool {
+	s := topScores(gameName)
+	return score > 0 && len(s) > 0 && s[0].Value == score && (len(s) < 2 || s[1].Value < score)
+}
 
 func (s *GameRunnerScene) Update(dt float64) (Scene, error) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyQ) {
@@ -200,7 +208,17 @@ func (s *GameRunnerScene) Update(dt float64) (Scene, error) {
 		}
 	}
 
-	return nil, s.runner.Update()
+	err := s.runner.Update()
+
+	// A new #1 skips the game-over overlay and goes straight to the champion
+	// screen, in the same frame the final score is saved.
+	if !s.checkedLeader && s.runner.ScoreID() != 0 {
+		s.checkedLeader = true
+		if isNewLeader(s.gameName, s.runner.Score()) {
+			return NewChampionScene(s.gameName, s.runner.Score(), s.runner.ScoreID()), err
+		}
+	}
+	return nil, err
 }
 
 func (s *GameRunnerScene) Draw(screen *ebiten.Image) {

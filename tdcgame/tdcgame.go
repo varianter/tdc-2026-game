@@ -50,6 +50,16 @@ type TdcGameEndX interface {
 	EndX() float64
 }
 
+// TdcGameWithFinalScore is optionally implemented by games that keep reporting
+// Running for a while after their score is final (e.g. a grace period that
+// swallows button mashing on their score screen). Once ScoreFinal returns
+// true the score is saved right away, so a new #1 is recognised without
+// waiting for GameOver.
+type TdcGameWithFinalScore interface {
+	TdcGame
+	ScoreFinal() bool
+}
+
 type PlayerUpdate func(buttonpressed bool, dt float64, level Level, player *MovingSquare)
 
 // GameWithCustomDraw is optionally implemented by games that want full control
