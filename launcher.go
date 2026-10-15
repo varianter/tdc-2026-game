@@ -45,8 +45,9 @@ var attractTime float64
 
 type gameEntry struct {
 	name     string
-	gameName string // internal key scores are stored under, e.g. "tdcrunner"
-	color    color.RGBA
+	gameName string     // internal key scores are stored under, e.g. "tdcrunner"
+	color    color.RGBA // accent, e.g. for the name on the champion screen
+	icon     *pixelArt  // listIconSize×listIconSize sprite shown beside the name
 	newScene func() Scene
 	key      ebiten.Key
 }
@@ -171,7 +172,7 @@ func (l *LauncherScene) Draw(screen *ebiten.Image) {
 	}
 }
 
-const listPanelW = 290
+const listPanelW = 270
 
 // Shared row layout, used both when drawing the low-res list visuals and
 // when drawing the crisp, device-resolution text on top of them.
@@ -188,7 +189,7 @@ const (
 	// frame). The block spans 4*listRowH-listRowGap tall.
 	listStartY   = panelTop + (panelBot-panelTop-(4*listRowH-listRowGap))/2 + listRowGap
 	listStartX   = 32
-	listSwatch   = 10
+	listIconSize = 12
 	listFontSize = 8
 )
 
@@ -198,11 +199,11 @@ const (
 const (
 	panelTop = 52
 	panelBot = 172
-	// The card is centered on the game rows (whose center sits at x=155) so the
+	// The card is centered on the game rows (whose center sits at x=145) so the
 	// selected row — which grows a few px wider — keeps equal margins on both
 	// sides of the purple frame instead of hugging one edge.
 	listCardX0 = 14
-	listCardX1 = 296
+	listCardX1 = 276
 )
 
 // cornerR is the shared corner radius (vp units) for panels and rows. Kept small
@@ -453,9 +454,9 @@ func (l *LauncherScene) rowRect(i int) (x, y, w, h float64) {
 }
 
 // drawGameList draws each game's pill inside the list card. Unselected rows are
-// a dim outline with the game's color swatch; the selected row glows brighter in
+// a dim outline; the selected row glows brighter in
 // neon cyan and fills left→right as the button is held, landing on a solid pill
-// exactly as the game launches.
+// exactly as the game launches. Every row shows the game's pixel-art icon.
 func (l *LauncherScene) drawGameList(screen *ebiten.Image, scale float64) {
 	s := float32(scale)
 	r := float32(cornerR) * s
@@ -470,12 +471,15 @@ func (l *LauncherScene) drawGameList(screen *ebiten.Image, scale float64) {
 				dst := screen.SubImage(clip).(*ebiten.Image)
 				fillRoundedRect(dst, rowX, rowY, rowW, rowH, r, selectedRowColor)
 			}
-			continue
+		} else {
+			strokeRoundedRect(screen, rowX, rowY, rowW, rowH, r, s, rowBorderColor)
 		}
 
-		strokeRoundedRect(screen, rowX, rowY, rowW, rowH, r, s, rowBorderColor)
-		swatch := float32(listSwatch) * s
-		fillRoundedRect(screen, float32(listStartX)*s, rowY+rowH/2-swatch/2, swatch, swatch, s, game.color)
+		// Every row keeps its icon in the same column; the selected row's is
+		// drawn over the hold fill so it stays visible as the fill sweeps by.
+		if game.icon != nil {
+			game.icon.Draw(screen, float64(listStartX)*scale, (y+h/2-listIconSize/2)*scale, scale)
+		}
 	}
 }
 
@@ -555,7 +559,7 @@ func (l *LauncherScene) drawText(screen *ebiten.Image, scale float64) {
 		midY := (y + h/2) * scale
 
 		if i == l.selected {
-			nameX := (x + 12) * scale
+			nameX := float64(listStartX+listIconSize+8) * scale
 			fontSize := float64(selectedNameFontSize) * scale
 			tdcgame.WriteAt(screen, game.name, nameX, midY, fontSize, whiteTextColor, text.AlignStart, text.AlignCenter)
 			// Over the hold-to-start accent fill the name flips to dark, so it
@@ -571,7 +575,7 @@ func (l *LauncherScene) drawText(screen *ebiten.Image, scale float64) {
 			continue
 		}
 
-		nameX := float64(listStartX+listSwatch+8) * scale
+		nameX := float64(listStartX+listIconSize+8) * scale
 		tdcgame.WriteAt(screen, game.name, nameX, midY, float64(listFontSize)*scale, whiteTextColor, text.AlignStart, text.AlignCenter)
 	}
 }

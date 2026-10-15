@@ -130,8 +130,9 @@ var backIcon = &pixelArt{rows: []string{
 // pixelArt is a small sprite defined as rows of iconPalette characters. Its
 // image is built on first draw, once the graphics context exists.
 type pixelArt struct {
-	rows []string
-	img  *ebiten.Image
+	rows    []string
+	palette map[byte]color.RGBA // nil means iconPalette
+	img     *ebiten.Image
 }
 
 // Draw draws the sprite with its top-left at device-pixel (x, y), each sprite
@@ -153,10 +154,14 @@ func (p *pixelArt) DrawColored(screen *ebiten.Image, x, y, px float64, clr color
 
 func (p *pixelArt) draw(screen *ebiten.Image, x, y, px float64, clr color.Color, alpha float64) {
 	if p.img == nil {
+		pal := p.palette
+		if pal == nil {
+			pal = iconPalette
+		}
 		rgba := image.NewRGBA(image.Rect(0, 0, len(p.rows[0]), len(p.rows)))
 		for py, row := range p.rows {
 			for px := 0; px < len(row); px++ {
-				if c, ok := iconPalette[row[px]]; ok {
+				if c, ok := pal[row[px]]; ok {
 					rgba.SetRGBA(px, py, c)
 				}
 			}
@@ -170,3 +175,82 @@ func (p *pixelArt) draw(screen *ebiten.Image, x, y, px float64, clr color.Color,
 	op.ColorScale.ScaleAlpha(float32(alpha))
 	screen.DrawImage(p.img, op)
 }
+
+// gameIconPalette colors the launcher's per-game icons.
+var gameIconPalette = map[byte]color.RGBA{
+	'r': {214, 58, 52, 255},   // red
+	'y': {255, 212, 47, 255},  // yellow
+	'b': {60, 140, 230, 255},  // blue
+	'd': {60, 80, 160, 255},   // denim
+	'o': {235, 130, 40, 255},  // ginger
+	'p': {255, 150, 170, 255}, // pink
+	'e': {110, 210, 90, 255},  // cat-eye green
+	'k': {20, 14, 30, 255},    // near-black
+	'w': {236, 240, 255, 255}, // white
+	's': {255, 204, 150, 255}, // skin
+	'h': {120, 70, 35, 255},   // hair
+	'n': {170, 110, 60, 255},  // wood
+	'N': {110, 65, 30, 255},   // wood shadow
+	'g': {160, 160, 175, 255}, // steel
+	'G': {105, 105, 120, 255}, // steel shadow
+}
+
+// Launcher icons, one per game, each listIconSize pixels square.
+var (
+	bouncyCastleIcon = &pixelArt{palette: gameIconPalette, rows: []string{
+		".y........y.",
+		"yyy......yyy",
+		"rrry.yy.yrrr",
+		"rrryyyyyyrrr",
+		"rrrrrrrrrrrr",
+		"rrrrrrrrrrrr",
+		"rrrrbbbbrrrr",
+		"rrrbbbbbbrrr",
+		"rrrbbbbbbrrr",
+		"rrrbbbbbbrrr",
+		"yyyyyyyyyyyy",
+		"yyyyyyyyyyyy",
+	}}
+	flappyGuyIcon = &pixelArt{palette: gameIconPalette, rows: []string{
+		"....hhhh....",
+		"....ssss....",
+		"....sksk....",
+		"....ssss....",
+		"ww..bbbb..ww",
+		"www.bbbb.www",
+		".wwwbbbbwww.",
+		"..wwbbbbww..",
+		"....bbbb....",
+		"....dddd....",
+		"....d..d....",
+		"....d..d....",
+	}}
+	catIcon = &pixelArt{palette: gameIconPalette, rows: []string{
+		"o..........o",
+		"oo........oo",
+		"opo......opo",
+		"oooooooooooo",
+		"oooooooooooo",
+		"ooeeooooeeoo",
+		"ooekooooekoo",
+		"oooooppooooo",
+		"woooowwoooow",
+		".oooooooooo.",
+		"..oooooooo..",
+		"............",
+	}}
+	hammerIcon = &pixelArt{palette: gameIconPalette, rows: []string{
+		"y..........y",
+		".gggggggggg.",
+		".gwwwwwwwwg.",
+		".gggggggggg.",
+		".GGGGGGGGGG.",
+		".....nN.....",
+		".....nN.....",
+		".....nN.....",
+		".....nN.....",
+		".....nN.....",
+		".....nN.....",
+		".....NN.....",
+	}}
+)
