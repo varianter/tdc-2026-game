@@ -10,6 +10,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"variant.dev/tdcgame/games/bounce"
+	"variant.dev/tdcgame/games/busybarista"
 	"variant.dev/tdcgame/games/flappyguy"
 	"variant.dev/tdcgame/games/petthedamncat"
 	"variant.dev/tdcgame/games/tdcrunner"
@@ -186,6 +187,14 @@ func isNewLeader(gameName string, score int) bool {
 }
 
 func (s *GameRunnerScene) Update(dt float64) (Scene, error) {
+	next, err := s.update(dt)
+	if next != nil {
+		s.runner.Close()
+	}
+	return next, err
+}
+
+func (s *GameRunnerScene) update(dt float64) (Scene, error) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyQ) {
 		return NewLauncherScene(), nil
 	}
@@ -235,6 +244,8 @@ func createGameFramework(gameName string) *tdcgame.GameRunner {
 		return tdcgame.NewGameFrameworkWithPlayer(assets, bounce.NewBounce(assets), scoreKeeper, gameName)
 	case "vclicker":
 		return tdcgame.NewGameFrameworkWithPlayer(assets, vclicker.NewVClickerScene(assets), scoreKeeper, gameName)
+	case "busybarista":
+		return tdcgame.NewGameFrameworkWithPlayer(assets, busybarista.New(assets), scoreKeeper, gameName)
 	case "flappy-guy":
 		return tdcgame.NewGameFrameworkWithPlayer(assets, flappyguy.New(), scoreKeeper, gameName)
 	case "petthedamncat":
@@ -291,6 +302,16 @@ func init() {
 		key:      ebiten.KeyV,
 		newScene: func() Scene {
 			return &GameRunnerScene{runner: createGameFramework("vclicker"), gameName: "vclicker", spaceTimer: -1}
+		},
+	})
+	launcherGames = append(launcherGames, gameEntry{
+		name:     "BUSY BARISTA",
+		gameName: "busybarista",
+		color:    color.RGBA{196, 140, 80, 255}, // #C48C50, crema
+		icon:     coffeeIcon,
+		key:      ebiten.KeyL,
+		newScene: func() Scene {
+			return &GameRunnerScene{runner: createGameFramework("busybarista"), gameName: "busybarista", spaceTimer: -1}
 		},
 	})
 }

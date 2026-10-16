@@ -60,6 +60,14 @@ type TdcGameWithFinalScore interface {
 	ScoreFinal() bool
 }
 
+// TdcGameWithCleanup is optionally implemented by games that hold resources
+// outliving a single frame, such as a looping ambience player. Cleanup is
+// called once when the game's scene is left, including quitting mid-run.
+type TdcGameWithCleanup interface {
+	TdcGame
+	Cleanup()
+}
+
 type PlayerUpdate func(buttonpressed bool, dt float64, level Level, player *MovingSquare)
 
 // GameWithCustomDraw is optionally implemented by games that want full control

@@ -158,6 +158,13 @@ func (g *GameRunner) Update() error {
 	return nil
 }
 
+// Close releases the game's resources when its scene is left.
+func (g *GameRunner) Close() {
+	if c, ok := g.game.(TdcGameWithCleanup); ok {
+		c.Cleanup()
+	}
+}
+
 // saveScore saves the final score once; later calls do nothing.
 func (g *GameRunner) saveScore() {
 	if g.scoreSaved || g.scoreKeeper == nil {

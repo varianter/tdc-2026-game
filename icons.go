@@ -34,6 +34,8 @@ var gameIconPalette = map[byte]color.RGBA{
 	'N': {110, 65, 30, 255},   // wood shadow
 	'g': {160, 160, 175, 255}, // steel
 	'G': {105, 105, 120, 255}, // steel shadow
+	'c': {92, 52, 30, 255},    // coffee
+	'C': {196, 140, 80, 255},  // crema
 }
 
 // Launcher icons, one per game, each listIconSize pixels square.
@@ -93,5 +95,19 @@ var (
 		".....nN.....",
 		".....nN.....",
 		".....NN.....",
+	}}
+	coffeeIcon = &tdcgame.PixelArt{Palette: gameIconPalette, Rows: []string{
+		"...w..w.....",
+		"....w..w....",
+		"...w..w.....",
+		"............",
+		"wwwwwwwwww..",
+		"wCCCCCCCCwww",
+		"wccccccccw.w",
+		"wccccccccw.w",
+		".wccccccwwww",
+		".wwwwwwww...",
+		"..wwwwww....",
+		"nnnnnnnnnnnn",
 	}}
 )
