@@ -31,7 +31,7 @@ const (
 	// feet on the floor line.
 	spriteFrame   = 64.0
 	spriteArtTop  = 15.0
-	mainCharScale = 0.64
+	mainCharScale = 1.0
 
 	// The jump is a parabolic hop with anticipation squash and apex stretch,
 	// re-armed on every smash. Short and snappy so it keeps up with mashing.
@@ -166,12 +166,14 @@ func NewVClickerScene(assetsFS embed.FS) *VClicker {
 // tint and flip variety makes them read as distinct people from one sprite.
 func (v *VClicker) buildCrowd() {
 	v.crowd = []figure{
-		{x: 52, y: floorY, scale: 0.50, phase: 0.0, tint: [3]float32{1.05, 0.78, 0.72}, flip: false},
-		{x: 110, y: floorY, scale: 0.52, phase: 1.3, tint: [3]float32{0.78, 0.90, 1.05}, flip: true},
-		{x: 168, y: floorY, scale: 0.50, phase: 0.6, tint: [3]float32{0.85, 1.05, 0.80}, flip: false},
-		{x: 258, y: floorY, scale: 0.50, phase: 2.1, tint: [3]float32{1.05, 1.00, 0.72}, flip: true},
-		{x: 316, y: floorY, scale: 0.52, phase: 0.9, tint: [3]float32{0.90, 0.82, 1.05}, flip: false},
-		{x: 374, y: floorY, scale: 0.50, phase: 2.6, tint: [3]float32{1.02, 0.86, 0.74}, flip: true},
+		// 0.75 is exactly 48/64, giving a larger frame without awkward
+		// fractional destination sizing.
+		{x: 52, y: floorY, scale: 0.75, phase: 0.0, tint: [3]float32{1.05, 0.78, 0.72}, flip: false},
+		{x: 110, y: floorY, scale: 0.75, phase: 1.3, tint: [3]float32{0.78, 0.90, 1.05}, flip: true},
+		{x: 168, y: floorY, scale: 0.75, phase: 0.6, tint: [3]float32{0.85, 1.05, 0.80}, flip: false},
+		{x: 258, y: floorY, scale: 0.75, phase: 2.1, tint: [3]float32{1.05, 1.00, 0.72}, flip: true},
+		{x: 316, y: floorY, scale: 0.75, phase: 0.9, tint: [3]float32{0.90, 0.82, 1.05}, flip: false},
+		{x: 374, y: floorY, scale: 0.75, phase: 2.6, tint: [3]float32{1.02, 0.86, 0.74}, flip: true},
 	}
 }
 
@@ -292,6 +294,8 @@ func (v *VClicker) CustomDraw(screen *ebiten.Image) {
 
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(scale, scale)
+	// Pixelated preserves hard pixel edges when the logical viewport is scaled
+	// by a non-integer amount on the device screen.
 	op.Filter = ebiten.FilterNearest
 	screen.DrawImage(vp, op)
 
@@ -501,7 +505,12 @@ func (v *VClicker) drawFigure(vp *ebiten.Image, x, y, scale, phase, yOff, sx, sy
 	op.GeoM.Scale(scale*sx, scale*sy)
 	// Feet-anchor: frame bottom lands on y. Scale from the ground up so squash
 	// keeps the feet planted.
-	op.GeoM.Translate(x-spriteFrame*scale*sx/2, (y+yOff)-spriteFrame*scale*sy)
+	// Keep the destination on logical pixel boundaries. Otherwise a fractional
+	// translation can make a one-pixel outline fall between sampled pixels.
+	op.GeoM.Translate(
+		math.Round(x-spriteFrame*scale*sx/2),
+		math.Round((y+yOff)-spriteFrame*scale*sy),
+	)
 	op.ColorScale.Scale(tint[0], tint[1], tint[2], 1)
 	vp.DrawImage(frame, op)
 }
