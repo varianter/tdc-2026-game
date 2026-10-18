@@ -157,7 +157,7 @@ func (l *LauncherScene) Draw(screen *ebiten.Image) {
 	// Dark panels first so every label sits on a clean background, then the
 	// crisp content on top of them.
 	l.drawTitle(screen, scale)
-	drawPanel(screen, scale, listCardX0, panelTop, listCardX1, panelBot, neonPurple)
+	drawPanel(screen, scale, listCardX0, panelTop, listCardX1, listCardBot, neonPurple)
 	l.drawScoreboardPanel(screen, scale)
 	l.drawGameList(screen, scale)
 	l.drawText(screen, scale)
@@ -181,13 +181,16 @@ const listPanelW = 270
 // (the pitch between row tops) is derived from it so the pill height itself
 // (listPillH) stays fixed regardless of how much gap is configured.
 const (
-	listPillH  = 22
-	listRowGap = 6
+	// listRows is how many games the card is sized for; bump it (and listCardBot)
+	// when adding a game.
+	listRows   = 5
+	listPillH  = 20
+	listRowGap = 5
 	listRowH   = listPillH + listRowGap
-	// listStartY centers the four-row block vertically in the card so the top and
+	// listStartY centers the row block vertically in the card so the top and
 	// bottom margins match (and the selected row's growth never overruns the
-	// frame). The block spans 4*listRowH-listRowGap tall.
-	listStartY   = panelTop + (panelBot-panelTop-(4*listRowH-listRowGap))/2 + listRowGap
+	// frame). The block spans listRows*listRowH-listRowGap tall.
+	listStartY   = panelTop + (listCardBot-panelTop-(listRows*listRowH-listRowGap))/2 + listRowGap
 	listStartX   = 32
 	listIconSize = 12
 	listFontSize = 8
@@ -199,6 +202,9 @@ const (
 const (
 	panelTop = 52
 	panelBot = 172
+	// listCardBot is the game list card's bottom edge. It extends below the
+	// scoreboard card to fit every game, overlapping the grid floor.
+	listCardBot = 186
 	// The card is centered on the game rows (whose center sits at x=145) so the
 	// selected row — which grows a few px wider — keeps equal margins on both
 	// sides of the purple frame instead of hugging one edge.
@@ -245,7 +251,7 @@ var whiteTextColor = color.RGBA{236, 240, 255, 255}   // cool near-white
 var rowBorderColor = color.RGBA{74, 58, 110, 255}     // dim purple outline
 var selectedRowColor = neonCyan                       // accent for the focused row
 var headerTextColor = color.RGBA{10, 6, 18, 255}      // dark text over bright fills
-var panelFillColor = color.RGBA{18, 11, 32, 235}      // near-opaque dark card
+var panelFillColor = color.RGBA{18, 11, 32, 255}      // opaque dark card; the list card covers the grid floor
 var footerLabelColor = color.RGBA{159, 232, 234, 255} // soft cyan
 
 // --- Animated backdrop --------------------------------------------------------

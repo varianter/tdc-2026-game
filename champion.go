@@ -121,7 +121,7 @@ func (c *ChampionScene) Draw(screen *ebiten.Image) {
 	// Icons are drawn at 1.5 logical px per icon pixel.
 	const iconScale, iconY, labelGap, groupGap, labelSize = 1.5, 187.0, 5.0, 36.0, 6.0
 	iconW := func(p *tdcgame.PressIcon) float64 { return p.Width() * iconScale }
-	tapLabel, holdLabel := "ENTER NAME", "CONTINUE"
+	tapLabel, holdLabel := "ENTER NAME", "SKIP"
 	tapW := iconW(tdcgame.TapIcon) + labelGap + tdcgame.MeasureWidth(tapLabel, labelSize*s)/s
 	holdW := iconW(tdcgame.HoldIcon) + labelGap + tdcgame.MeasureWidth(holdLabel, labelSize*s)/s
 	labelY := (iconY + 11*iconScale) * s
