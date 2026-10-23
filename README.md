@@ -1,4 +1,4 @@
-# TDC Game
+# Variant Arcade
 
 Flere spill som kan spilles ved å trykke en enkelt knapp.
 
